@@ -72,7 +72,7 @@ class TypeManager(Manager):
         
         if not isinstance(data, list): data = [data]
         for field in data:
-            self.fields.append(Field(**field))
+            self.fields.append(field)
 
     def has_options(self):
         return self.options.has_key('options')

@@ -599,13 +599,15 @@ class Document(DIV):
         )
 
     def build_page_content(self):
-        SQLFORM.formstyles.document = self.formstyle_document
-        SQLFORM.widgets = widgets
+        #SQLFORM.formstyles.document = self.formstyle_document
+        #SQLFORM.widgets = widgets
+        print(self.document.vtable, type(self.document.vtable))
+        print(self.document.vtable.fields)
         new_form = SQLFORM( 
             self.document.vtable,
             self.document.data or None,
             submit_button = self.submit_button,
-            formstyle='document',
+            formstyle='bootstrap',
         )
         return DIV(
                    new_form, 

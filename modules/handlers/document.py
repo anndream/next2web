@@ -46,6 +46,8 @@ class Document(Base):
         self.roles = StorageList()
         self.perms = StorageList()
         
+        self.deps = []
+        
         self.__dependecies = None        
         self.load_document()
 
@@ -122,8 +124,8 @@ class Document(Base):
         deps = []
         if not self.fields: return deps
         for field in self.fields:
-            if self.fields[field].df_type in ('link', ):
-                self.deps.append(self.fields[field.df_type].get_option('document'))
+            if self.fields[field].meta.df_type in ('link', ):
+                self.deps.append(self.fields[field].get_field_option('document'))
         return deps
 
     def exists(self, doc_name):
@@ -151,17 +153,17 @@ class Document(Base):
             if self.has_fields() and self.has_childs():
                 self.define_tables()
 
-    def load_fields(self, field_names = [], doc_name='', in_field_list=True):        
-        if all(map(lambda x: not x, [field_names, doc_name, self.parent])): 
-            return
-        
+    def load_fields(self, field_names = [], doc_name='', in_field_list=True):
+        if not self.meta:
+            if not self.field_names and doc_name:
+                raise DocumentNotLoaded
         fields = []
         
         if not field_names: 
             for field in self.list_fields():
                 fields.append(self.load_field(field.df_name, doc_name, in_field_list))
         elif isinstance(field_names, basestring) and self.has_field(field_names):
-            fields.apend(self.load_field(field_names, doc_name, in_field_list))
+            fields.append(self.load_field(field_names, doc_name, in_field_list))
         elif isinstance(field_names, (list, set)):
             for field_name in field_names:
                 if self.has_childs(field_name):
@@ -182,7 +184,7 @@ class Document(Base):
             return False
         document = self._db.Document(self._db.Document.doc_name==doc_name) or self.meta
         return self._db(
-            (self._db.DocumentField.documente==document)&\
+            (self._db.DocumentField.document==document)&\
             (self._db.DocumentField.df_name==field_name)
         ).count()>0
     
@@ -424,10 +426,11 @@ class Document(Base):
     
     def define_virtual_table(self):
         from gluon.dal import Table, DAL
+        [self.fields[x].field for x in self.fields]
         table = Table(
             DAL(None),
             self.meta.doc_name,
-            *self.define_fields(True)
+            *[self.fields[x]._field for x in self.fields]
         )
         return table
     
@@ -593,7 +596,7 @@ class DocumentField(Base):
     def load_doc_field(self, df_id=None, df_name='', document=''):
         from helpers.manager import ValidatorList, TypeManager
         assert any([df_id, df_name, document]), u'Unable for load `doc_field` without and `df_id` or `df_name` and `document`'
-        assert all(map(lambda x: not x, [self.parent, df_id])) and all([df_name, document]), u'Unable for load `doc_field` with an `df_name` and without `doc_name` or `parent`'
+        #assert all(map(lambda x: not x, [self.parent, df_id])) and all([df_name, document]), u'Unable for load `doc_field` with an `df_name` and without `doc_name` or `parent`'
 
         if df_id:
             self.meta = self._db.DocumentField(df_id)
@@ -623,7 +626,7 @@ class DocumentField(Base):
                 self.meta.df_type, 
                 unique = policy_unique in self.meta.df_policy,
                 required = policy_required in self.meta.df_policy,
-                lenght=self.meta.df_length,
+                length=self.meta.df_length,
                 default=self.meta.df_default,
             )
         return self._field

@@ -1,0 +1,181 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>
+			next2web CMS
+		</title>
+		<!-- jQuery -->
+		<script src="{{=URL(c='static', f='templates', args=['bootstrap', 'js','jquery-1.8.2.js'])}}"></script>
+		<!-- BootStrap CSS -->
+		<link href="{{=URL(c='static', f='templates', args=['bootstrap','css','bootstrap.min.css'])}}" rel="stylesheet" media="screen">
+		<!-- jQuery-ui Bootstrap CSS -->
+		<link href="css/custom-theme/jquery-ui-1.8.16.custom.css" rel="stylesheet" media="screen">
+		<!-- jQuery-ui timepicker CSS -->
+		<link href="third-party/jQuery-Timepicker/jquery-ui-timepicker-addon.css" rel="stylesheet" media="screen">
+		<!-- Bootstrap wysihtml5 CSS -->
+		<link href="third-party/wysihtml5/bootstrap-wysihtml5-0.0.2.css" rel="stylesheet" media="screen">
+		<!-- jQuery-Scrollpane CSS -->
+		<link href="third-party/jQuery-jScrollpane/jquery.jscrollpane.css" rel="stylesheet" media="screen">
+		<!-- jQuery-Select2 CSS -->
+		<link href="third-party/jQuery-Select2/select2.css" rel="stylesheet" media="screen">
+		<!-- DataTables -->
+		<!--link href="third-party/DataTables/css/jquery.dataTables.css" rel="styllesheet" media="screen"-->
+		<!-- style -->
+		<link href="{{=URL(c='static', f='templates', args=['bootstrap','css','style.css'])}}" rel="stylesheet" media="screen">
+		
+	</head>
+	<body>
+		<div class="navbar navbar-fixed-top">
+			<div class="navbar-inner">
+				<div class="container-fluid">
+					<a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+					</a>
+					<a class="brand" href="#">next2web CMS</a>
+					<div class="nav-collapse">
+						<ul class="nav">
+							<li class="active"><a href="#">Menu</a></li>
+							<li><a href="#">Menu</a></li>
+							<li><a href="#">Menu</a></li>
+							<li><a href="#">Menu</a></li>
+						</ul>
+					</div>
+					<ul class="nav pull-right">
+						<li class="dropdown">
+							<a class="dropdown-toggle" href="#" data-toggle="dropdown"><i class="icon-user"></i><b class="caret"></b></a>
+							<div class="dropdown-menu" style="padding: 10px; padding-bottom: 0px;">
+								<form method="post" action="login" accept-charset="UTF-8">
+									<input style="margin-bottom: 15px;" type="text" placeholder="Username" id="username" name="username">
+									<input style="margin-bottom: 15px;" type="password" placeholder="Password" id="password" name="password">
+									<input style="float: left; margin-right: 10px;" type="checkbox" name="remember-me" id="remember-me" value="1">
+									<label class="string optional" for="user_remember_me"> Remember me</label>
+									<input class="btn btn-primary btn-block" type="submit" id="sign-in" value="Sign In">
+									<label style="text-align:center;margin-top:5px">or</label>
+	                                <input class="btn btn-primary btn-block" type="button" id="sign-in-google" value="Sign In with Google">
+									<input class="btn btn-primary btn-block" type="button" id="sign-in-twitter" value="Sign In with Twitter">
+								</form>	
+							</div>
+						</li>
+						<li class="dropdown">
+							<a class="dropdown-toggle" data-toggle="dropdown"><i class="icon-envelope"></i><b class="caret"></b></a>
+							<div class="dropdown-menu" style="padding: 10px; padding-bottom: 0px;">
+								<ul class="nav nav-list">
+									<li>Show all notifications</li>
+								</ul>
+							</div>
+						</li>
+					</ul>
+				</div>
+			</div>
+		</div>
+		
+		{{include}}
+				
+		<script src="js/jquery-ui-1.9.1.custom.min.js"></script>
+		<script src="js/bootstrap.min.js"></script>
+		<script src="third-party/jQuery-Timepicker/jquery-ui-sliderAccess.js"></script>
+		<script src="third-party/jQuery-Timepicker/jquery-ui-timepicker-addon.js"></script>
+		<script src="third-party/jQuery-iMask/iMask.js"></script>
+		<script src="third-party/wysihtml5/wysihtml5-0.3.0_rc2.min.js"></script>
+		<script src="third-party/wysihtml5/bootstrap-wysihtml5-0.0.2.min.js"></script>
+		
+		<script src="third-party/jQuery-Select2/select2.min.js"></script>
+		<script src="third-party/DataTables/js/jquery.dataTables.js"></script>
+		<script src="third-party/DataTables/extras/FixedColumns/FixedColumns.js"></script>
+		
+		<script>
+			$('.upload-control a').click(function(){
+				$('input[name=upload]').click();
+			});
+			$('input.upload').change(function(){
+				$('#text_for_upload').val($(this).val());
+			});
+			$('input.date').datepicker();
+			$('.ui-datepicker-trigger').addClass('clearfix btn').html('<i class="icon-calendar"></i>').css('width', '28px').css('padding-left', '5px').css('padding-right', '5px');
+			$('input.time').timepicker();
+			$('input.datetime').datetimepicker();
+			$('input.integer').iMask({
+				'type': 'number',
+				'groupdigits': 3,
+				'groupSymbol': '.',
+				'decDigits': 0,
+				'decSymbol': ''
+			});
+			$('input.currency').iMask({
+				'type': 'number',
+				'groupDigits': 3,
+				'groupSymbol': '.',
+				'decDigits': 2,
+				'decSymbol': ','
+			});
+			$('input.double').iMask({
+				'type': 'number',
+				'groupDigits': 3,
+				'groupSymbol': '.',
+				'decDigits': 2,
+				'decSymbol': ','
+			});
+			$('textarea.texteditor').wysihtml5();
+			$('ul.wysihtml5-toolbar li a.btn').addClass('btn-mini');			
+			function scroll_textarea(selector){
+				var element = $(selector), 
+				    parent=element.parent();
+				
+				element.wrap('');
+				parent.css('height', element.outerHeight()).css('width', element.outerWidth()).css('overflow-y', 'auto');
+				parent.jScrollPane({
+					showArrows: true
+				})
+			}
+			
+			//scroll_textarea('.smalltext');
+			
+			$('.tags').select2({tags: [], tokenSeparators: [',', ' ']})
+			
+			$('.control-group span.help-block a').each(function(i,v){
+				$(v).popover();
+			});
+			
+			$('.table').each(function(i,v){
+				var oTable = $(v).dataTable({
+					'sScrollY': '200px',
+					'sScrollX': '100%',
+					'ScrollXInner': '150%',
+					'bScrollCollapse': true,
+					'bPaginate': false,
+					'bFilter': false,
+					'oLanguage': {
+						'sInfo': '',
+						'sInfoFiltered': '',
+					},
+					'fnDrawCallBack': function( oSettings ){
+						var i = 0, 
+						    iLen=oSettings.aiDisplay.length;
+						if ( oSettings.bSorted || oSettings.bFiltered ){
+							for ( ; i<iLen; i++){
+								var nTr = oSettings.aoData[ oSettings.aiDisplay[i]].nTr;
+								this.fnUpdate(i+1, nTr, 0, false, false)
+							}
+						}
+					},
+					'aoColumnDefs': [
+						{'bSortable': false, 'sClass': 'index', aTargets: [0]}
+					],
+					'aaSorting': [[0, 'asc']]
+				});
+				new FixedColumns(oTable);
+			});
+			
+			$('.navigation > li').hover(function () {
+   				$('a',$(this)).stop().animate({'marginLeft':'-75px', 'width': '80px'},200);
+  			},
+  			function () {
+   				$('a',$(this)).stop().animate({'marginLeft':'-15px', 'width': '20px'},200);
+  			}
+ 			);
+		</script>
+	</body>
+</html>

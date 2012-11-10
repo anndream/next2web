@@ -1,0 +1,113 @@
+{
+	"doc_name": "document",
+	"doc_title": "Document",
+	"doc_description": "The Document is the smallest part of the data set next2web, here you can manage and control all other documents, including, removing, hiding, showing fields to the forms.",
+	"doc_tablename": "tabDocument",
+	"doc_fields": [
+		{
+			"df_name": "doc_name",
+			"df_type": "string",
+			"df_policy": "rwun",
+			"df_label": "Name of Document"
+		},
+		{
+			"df_name": "doc_title",
+			"df_type": "text",
+			"df_policy": "rwun",
+			"df_label": "Title of Document"
+		},
+		{
+			"df_name": "doc_description",
+			"df_type": "text",
+			"df_label": "Description"
+		},
+		{
+			"df_name": "doc_parent",
+			"df_type": "link",
+			"df_policy": "rw",
+			"df_label": "Parent",
+			"df_typemeta": {
+				"document": "document",
+				"label": "doc_name"
+			}
+		},
+		{
+			"df_name": "doc_tablename",
+			"df_type": "string",
+			"df_policy": "rwun",
+			"df_label": "Table Name"
+		},
+		{
+			"df_name": "doc_propertiesmeta",
+			"df_type": "text",
+			"df_policy": ""
+		}
+	],
+	"childs": {
+		"tabDocumentField": [
+			{
+				"df_name": "document",
+				"df_type": "link",
+				"df_policy": "n",
+				"df_typemeta": {
+					"document": "document",
+					"label": "doc_name"
+				}
+			},
+			{
+				"df_name": "df_name",
+				"df_type": "string",
+				"df_policy": "rwupn",
+				"df_label": "Field Name"
+			},
+			{
+				"df_name": "df_type",
+				"df_type": "string",
+				"df_policy": "rwn",
+				"df_label": "Field Type"
+			},
+			{
+				"df_name": "df_length",
+				"df_type": "integer",
+				"df_label": "Length"
+			},
+			{
+				"df_name": "df_default",
+				"df_type": "string",
+				"df_label": "Default Value" 
+			},
+			{
+				"df_name": "df_policy",
+				"df_type": "string",
+				"df_default": "rw",
+				"df_label": "Policy"
+			},
+			{
+				"df_name": "df_label",
+				"df_type": "string",
+				"df_policy": "rwn"
+			},
+			{
+				"df_name": "df_description",
+				"df_type": "text",
+				"df_length": 50,
+				"df_label": "Description"
+			},
+			{
+				"df_name": "df_represent",
+				"df_type": "string",
+				"df_label": "Representation"
+			},
+			{
+				"df_name": "df_typemeta",
+				"df_type": "text",
+				"df_policy": ""
+			},
+			{
+				"df_name": "df_validatorsmeta", 
+				"df_type": "text",
+				"df_policy": ""
+			}
+		]
+	}
+}

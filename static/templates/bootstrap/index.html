@@ -1,0 +1,501 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>
+			next2web CMS
+		</title>
+		<!-- jQuery -->
+		<script src="js/jquery-1.8.2.js"></script>
+		<!-- BootStrap CSS -->
+		<link href="css/bootstrap.min.css" rel="stylesheet" media="screen">
+		<!-- jQuery-ui Bootstrap CSS -->
+		<link href="css/custom-theme/jquery-ui-1.8.16.custom.css" rel="stylesheet" media="screen">
+		<!-- jQuery-ui timepicker CSS -->
+		<link href="third-party/jQuery-Timepicker/jquery-ui-timepicker-addon.css" rel="stylesheet" media="screen">
+		<!-- Bootstrap wysihtml5 CSS -->
+		<link href="third-party/wysihtml5/bootstrap-wysihtml5-0.0.2.css" rel="stylesheet" media="screen">
+		<!-- jQuery-Scrollpane CSS -->
+		<link href="third-party/jQuery-jScrollpane/jquery.jscrollpane.css" rel="stylesheet" media="screen">
+		<!-- jQuery-Select2 CSS -->
+		<link href="third-party/jQuery-Select2/select2.css" rel="stylesheet" media="screen">
+		<!-- DataTables -->
+		<!--link href="third-party/DataTables/css/jquery.dataTables.css" rel="styllesheet" media="screen"-->
+		<!-- style -->
+		<link href="css/style.css" rel="stylesheet" media="screen">
+		
+	</head>
+	<body>
+		<div class="navbar navbar-fixed-top">
+			<div class="navbar-inner">
+				<div class="container-fluid">
+					<a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+					</a>
+					<a class="brand" href="#">next2web CMS</a>
+					<div class="nav-collapse">
+						<ul class="nav">
+							<li class="active"><a href="#">Menu</a></li>
+							<li><a href="#">Menu</a></li>
+							<li><a href="#">Menu</a></li>
+							<li><a href="#">Menu</a></li>
+						</ul>
+					</div>
+					<ul class="nav pull-right">
+						<li class="dropdown">
+							<a class="dropdown-toggle" href="#" data-toggle="dropdown"><i class="icon-user"></i><b class="caret"></b></a>
+							<div class="dropdown-menu" style="padding: 10px; padding-bottom: 0px;">
+								<form method="post" action="login" accept-charset="UTF-8">
+									<input style="margin-bottom: 15px;" type="text" placeholder="Username" id="username" name="username">
+									<input style="margin-bottom: 15px;" type="password" placeholder="Password" id="password" name="password">
+									<input style="float: left; margin-right: 10px;" type="checkbox" name="remember-me" id="remember-me" value="1">
+									<label class="string optional" for="user_remember_me"> Remember me</label>
+									<input class="btn btn-primary btn-block" type="submit" id="sign-in" value="Sign In">
+									<label style="text-align:center;margin-top:5px">or</label>
+	                                <input class="btn btn-primary btn-block" type="button" id="sign-in-google" value="Sign In with Google">
+									<input class="btn btn-primary btn-block" type="button" id="sign-in-twitter" value="Sign In with Twitter">
+								</form>	
+							</div>
+						</li>
+						<li class="dropdown">
+							<a class="dropdown-toggle" data-toggle="dropdown"><i class="icon-envelope"></i><b class="caret"></b></a>
+							<div class="dropdown-menu" style="padding: 10px; padding-bottom: 0px;">
+								<ul class="nav nav-list">
+									<li>Show all notifications</li>
+								</ul>
+							</div>
+						</li>
+					</ul>
+				</div>
+			</div>
+		</div>
+		<div class="page">
+			<ul class='navigation'>
+				<li id='nav-document'><a title="Document"></a></li>
+				<li id='nav-page'><a title="Page"></a></li>
+				<li id='nav-webmail'><a title="WebMail"></a></li>
+			</ul>
+			<div class="page-header">
+				<div class="pull-right">
+					<a class="close well-small">&times;</a>
+					<ul class="breadcrumb pull-right">
+						<li><a href="#"><i class="icon-home"></i></a> <span class="divider">/</span></li>
+						<li><a href="#">HR</a> <span class="divider">/</span></li>
+						<li class="active">Employee</li>
+					</ul>
+				</div>
+				<h1>Document <small>This is a single document</small></h1>
+			</div>
+			<div class="page-content">
+				<form>
+					<div class="section clearfix">
+						<div class="section-head">
+							<h3 class="head">Section Head</h3>
+						</div>
+						<div class="section-content">
+							<div class="content-column column-left">
+								<div class="control-group info">
+									<label for="string">String</label>
+									<input name="string" type="text" class="string" placeholder="input.string">
+									<span class="help-block">An small help text</span>
+								</div>
+								<div class="control-group error">
+									<label for="integer">Integer</label>
+									<span class="help-inline">An small error messsage</span>
+									<input name="integer" type="text" class="integer" placeholder="input.integer">
+								</div>
+								<div class="control-group">
+									<label for="double">Double</label>
+									<input name="double" type="text" class="double" placeholder="input.double">
+									<span class="help-block"><a href="#" data-animation="true" data-placement="bottom" data-trigger="hover" data-content="This is a long, very, very long help description embed in a popover!"><i class="icon-exclamation-sign"></i></a></span>
+								</div>
+								<div class="control-group">
+									<label for="currency">Currency</label>
+									<div class="input-prepend">
+										<span class="add-on">R$</span>
+										<input name="currency" type="text" class="currency" placeholder="input.currency">
+									</div>
+								</div>	
+								<div class="control-group">
+									<label for="select">Select</label>
+									<select name="select" class="select" placeholder="select.select">
+										<option>Option</option>
+										<option>Option</option>
+									</select>
+								</div>
+								<div class="control-group">
+									<label for="multipleselect">Multipleselect</label>
+									<select name="multipleselect" class="multipleselect" multiple="multiple">
+										<option>Option</option>
+										<option>Option</option>
+									</select>
+								</div>
+							</div>
+							<div class="content-column column-right">
+								<div class="control-group">
+									<label for="date">Date</label>
+									<div class="input-prepend">
+										<span class="add-on"><i class="icon-calendar"></i></span>
+										<input id="date" name="date" type="text" class="date" placeholder="input.date">
+									</div>
+								</div>
+								<div class="control-group">
+									<label for="time">Time</label>
+									<div class="input-prepend time-control">
+										<span class="add-on"><i class="icon-time"></i></span>
+										<input name="time" type="text" class="time" placeholder="input.time">
+										
+									</div>
+								</div>
+								<div class="control-group">
+									<label for="datetime">Datetime</label>
+									<div class="input-prepend datetime-control">
+										<span class="add-on"><i class="icon-calendar"></i></span>
+										<input name="datetime" type="text" class="datetime" placeholder="input.datetime">
+									</div>
+								</div>
+								<div class="control-group">
+									<label for="link">Link</label>
+									<div class="input-append link-control">
+										<input type="hidden" name="link">
+										<input type="text" class="link-text span8" placeholder="input.link" id="text_for_link">
+										<a class="btn btn-mini" title="Pesquisar" onclick="$('#modal_for_link').modal();"><i class="icon-search"></i></a>
+										<a class="btn btn-mini" title="Linkar"><i class="icon-play"></i></a>
+										<a class="btn btn-mini" title="Adicionar"><i class="icon-plus"></i></a>	
+									</div>
+									<span class="help-block"><a href="#" data-animation="true" data-placement="bottom" data-trigger="hover" data-content="Widget Link &eacute; usado em campos do tipo 'reference', para facilitar a inser&ccedil;&atilde;o de refer&ecirc;cias entre documentos."><i class="icon-exclamation-sign"></i></a></span>
+								</div>
+								<div class="control-group">
+									<label for="file">Upload</label>
+									<input type="file" name="upload" class="upload">
+									<div class="input-append upload-control">
+										<input id="text_for_upload" type="text" class="upload-text">
+										<a class="btn btn-mini"><i class="icon-folder-open"></i></a>
+									</div>
+								</div>
+								<div class="control-group">
+									<label for="smalltext">Smalltext</label>
+									<div class='textarea-control'>
+										<textarea name="smalltext" class="smalltext nano" rows="4"></textarea>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="section clearfix">
+						<div class="section-head">
+							<h3>Another section</h3>
+						</div>
+						<div class="section-content">
+							<div class="table-head">
+								<div class="pull-right muted">
+									Move:
+									<span><a><i class="icon-arrow-up"></i>Up</a></span>
+									<span><a><i class="icon-arrow-down"></i>Down</a></span>
+									<span class="divider">|</span>
+									<span><a><i class="icon-plus-sign"></i>Add</a></span>
+									<span><a><i class="icon-remove-sign"></i>Del</a></span>
+								</div>
+							</div>
+							<div class="table-content clearfix">
+								<table class="table table-hover">
+									<thead>
+										<tr>
+											<th>#</th>
+											<th>First Name</th>
+											<th>Last Name</th>
+											<th>Email Address</th>
+											<th>Hometown</th>
+										</tr>
+									</thead>
+									<tbody>
+							            <tr>
+							              	<td>1 <a><i class="icon-edit"></i></a> <a><i class="icon-remove"></i></a> </td>
+											<td>Johnny</td>
+								            <td>Appleseed</td>
+								            <td>johnny.appleseed@email.com</td>
+								            <td>New York, NY</td>
+							            </tr>
+							            <tr>
+							              	<td>2 <a><i class="icon-edit"></i></a> <a><i class="icon-remove"></i></a> </td>
+							                <td>Marty</td>
+							                <td>McFly</td>
+							                <td>not.a.chicken@hotmail.com</td>
+							                <td>Hill Valley, CA</td>
+							            </tr>
+							            <tr>
+							              	<td>3 <a><i class="icon-edit"></i></a> <a><i class="icon-remove"></i></a> </td>
+							                <td>Tucan</td>
+							                <td>Sam</td>
+							                <td>fruity@generalmills.com</td>
+							                <td>-</td>
+							            </tr>
+							            <tr>
+							              	<td>4 <a><i class="icon-edit"></i></a> <a><i class="icon-remove"></i></a> </td>
+							                <td>Darth</td>
+							                <td>Vader</td>
+							                <td>lord.of.the.sith@deathstar.gov</td>
+							                <td>Tatooine</td>
+							        	</tr>
+							        	<tr>
+							              	<td>5 <a><i class="icon-edit"></i></a> <a><i class="icon-remove"></i></a> </td>
+							                <td>Tucan</td>
+							                <td>Sam</td>
+							                <td>fruity@generalmills.com</td>
+							                <td>-</td>
+							            </tr>
+							            <tr>
+							              	<td>6 <a><i class="icon-edit"></i></a> <a><i class="icon-remove"></i></a> </td>
+							                <td>Darth</td>
+							                <td>Vader</td>
+							                <td>lord.of.the.sith@deathstar.gov</td>
+							                <td>Tatooine</td>
+							        	</tr>
+							    	</tbody>
+								</table>
+							</div>
+						</div>
+					</div>
+					<div class="section clearfix">
+						<div class="section-head">
+							<h3>Texteditor section</h3>
+						</div>
+						<div class="section-content">
+							<div class="control-group">
+								<label for="texteditor">Texteditor</label>
+								<textarea name="texteditor" class="texteditor" style="width: 660px; height: 200px"></textarea>
+							</div>
+						</div>
+					</div>
+				</form>
+				<div class='dialogs'>
+					<div class="link-modal modal hide fade" id="modal_for_link" data-backdrop="false" data-keyboard="true">
+						<div class="modal-header">
+							<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+							<h3>Select</h3>
+						</div>
+						<div class="modal-body">
+							<form class="modal-form">
+								<div class="link-filter">
+									<div class="control-group link-condition">
+										<select name="logical" class="logical">
+											<option value="and">AND</option>
+											<option value="or">OR</option>
+										</select>
+										<select name="doc_field" class="doc_field">
+											<option value="id">ID</option>
+											<option value="first_name">First Name</option>
+											<option value="last_name">Last Name</option>
+											<option value="email_address">Email Address</option>
+											<option value="hometown">Home Town</option>
+										</select>
+										<select name="condition" class="condition">
+											<option value="=">Equals</option>
+											<option value="like">Like</option>
+											<option value=">=">Grater or equals</option>
+											<option value="<=">Less or equals</option>
+											<option value=">">Greather than</option>
+											<option value="<">Less than</option>
+											<option value="in">In</option>
+											<option value="!=">Not Equals</option>
+											<option value="contains">Contains</option>
+											<option value="start_with">Start With</option>
+											<option value="end_with">End With</option>
+										</select>
+										<input name="value" type="text">
+										<a class="btn btn-mini add" href="javascript:void(0);" onclick="add_row(this);"><i class="icon-plus"></i></a>
+										<a class="btn btn-mini remove" href="javascript:void(0);" onclick="remove_row(this)"><i class="icon-remove"></i></a>
+									</div>
+									<div class="actions">
+										<button type="submit" class="btn"><i class="icon-search"></i> Filter</button>
+									</div>
+								</div>	
+							</form>
+							<div class="link-results">
+							</div>
+						</div>
+					</div>
+				</div>
+				<script type="text/javascript">
+				 	jQuery('.link-condition').first().addClass('first');
+					function add_row(el){
+						if (!$(el).parent().find(':text').val()){
+							if (!$(el).parent().is('.error')){
+                    			$(el).parent().addClass('error');
+                			}
+                			return;	
+						} 
+						if ($(el).parent().is('.error')) $(el).parent().removeClass('error');
+						row = jQuery(el).parent().clone(true);
+						row.removeClass('first').insertBefore($(el).parent().parent().find('.actions'));
+						row.parent().find('.link-condition').each(function(i,v){
+							$(v).find('select, input').each(function(x,y){
+								$(y).attr('name', $(y).attr('class') + '_'+i)}
+							);
+						});
+						row.find(':text').val('').focus();
+					}
+					function remove_row(el){
+						jQuery(el).parent().remove();
+					}
+					function build_query(el){
+						jQuery(el).parent().find('.list')
+					}
+				</script>
+			</div>
+			<div class="page-menu">
+				<ul class="nav nav-tabs nav-stacked">
+					<li class="nav-header">Actions</li>
+					<li><a tabindex="-1" href="#"><i class="icon-plus"></i>New</a></li>
+					<li><a tabindex="-1" href="#"><i class="icon-list-alt"></i>List</a></li>
+					<li><a tabindex="-1" href="#"><i class="icon-refresh"></i>Refresh</a></li>
+					<li><a tabindex="-1" href="#"><i class="icon-print"></i>Print</a></li>
+					<li><a tabindex="-1" href="#"><i class="icon-envelope"></i>Email</a></li>
+					<li><a tabindex="-1" href="#"><i class="icon-trash"></i>Exclude</a></li>
+				</ul>
+				<div style="margin-bottom: 20px">
+					<a class="nav-header">Assign To</a>
+					<a class="btn btn-small">Assign this document to</a>									
+				</div>
+				<div style="margin-bottom: 20px">
+					<a class="nav-header">Attachments</a>
+					<a class="btn btn-small">Attach file</a>
+				</div>
+				<div style="margin-bottom: 20px">
+					<a class="nav-header">Comments</a>
+					<form class='form-inline'>
+						<input type="text" class="input-small" placeholder="Coment&aacute;rio">
+						<button type="submit" class="btn">Send</button>
+					</form>
+				</div>
+				<div class="clearfix" style="margin-bottom: 20px">
+					<a class="nav-header">Tags</a>
+					<form>
+						<fieldset>
+							<input type="hidden" name="tags" class="tags" style="width:180px">
+						</fieldset>
+					</form>
+				</div>
+				<div style="margin-bottom: 20px">
+					<a class="nav-header">Users</a>
+					<div>
+						Criated:
+						<div style="margin-bottom: 5px; margin-top: 5px;">
+							<img title="Nome do Usu&aacute;rio" class="img-circle" src="http://placehold.it/32x32"> 16/10/2012 12:11:58
+						</div>
+						Edited:
+						<div style="margin-bottom: 5px; margin-top: 5px;">
+							<img title="Nome do Usu&aacute;rio" class="img-circle" src="http://placehold.it/32x32"> 16/10/2012 12:11:58
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+				
+		<script src="js/jquery-ui-1.9.1.custom.min.js"></script>
+		<script src="js/bootstrap.min.js"></script>
+		<script src="third-party/jQuery-Timepicker/jquery-ui-sliderAccess.js"></script>
+		<script src="third-party/jQuery-Timepicker/jquery-ui-timepicker-addon.js"></script>
+		<script src="third-party/jQuery-iMask/iMask.js"></script>
+		<script src="third-party/wysihtml5/wysihtml5-0.3.0_rc2.min.js"></script>
+		<script src="third-party/wysihtml5/bootstrap-wysihtml5-0.0.2.min.js"></script>
+		
+		<script src="third-party/jQuery-Select2/select2.min.js"></script>
+		<script src="third-party/DataTables/js/jquery.dataTables.js"></script>
+		<script src="third-party/DataTables/extras/FixedColumns/FixedColumns.js"></script>
+		
+		<script>
+			$('.upload-control a').click(function(){
+				$('input[name=upload]').click();
+			});
+			$('input.upload').change(function(){
+				$('#text_for_upload').val($(this).val());
+			});
+			$('input.date').datepicker();
+			$('.ui-datepicker-trigger').addClass('clearfix btn').html('<i class="icon-calendar"></i>').css('width', '28px').css('padding-left', '5px').css('padding-right', '5px');
+			$('input.time').timepicker();
+			$('input.datetime').datetimepicker();
+			$('input.integer').iMask({
+				'type': 'number',
+				'groupdigits': 3,
+				'groupSymbol': '.',
+				'decDigits': 0,
+				'decSymbol': ''
+			});
+			$('input.currency').iMask({
+				'type': 'number',
+				'groupDigits': 3,
+				'groupSymbol': '.',
+				'decDigits': 2,
+				'decSymbol': ','
+			});
+			$('input.double').iMask({
+				'type': 'number',
+				'groupDigits': 3,
+				'groupSymbol': '.',
+				'decDigits': 2,
+				'decSymbol': ','
+			});
+			$('textarea.texteditor').wysihtml5();
+			$('ul.wysihtml5-toolbar li a.btn').addClass('btn-mini');			
+			function scroll_textarea(selector){
+				var element = $(selector), 
+				    parent=element.parent();
+				
+				element.wrap('');
+				parent.css('height', element.outerHeight()).css('width', element.outerWidth()).css('overflow-y', 'auto');
+				parent.jScrollPane({
+					showArrows: true
+				})
+			}
+			
+			//scroll_textarea('.smalltext');
+			
+			$('.tags').select2({tags: [], tokenSeparators: [',', ' ']})
+			
+			$('.control-group span.help-block a').each(function(i,v){
+				$(v).popover();
+			});
+			
+			$('.table').each(function(i,v){
+				var oTable = $(v).dataTable({
+					'sScrollY': '200px',
+					'sScrollX': '100%',
+					'ScrollXInner': '150%',
+					'bScrollCollapse': true,
+					'bPaginate': false,
+					'bFilter': false,
+					'oLanguage': {
+						'sInfo': '',
+						'sInfoFiltered': '',
+					},
+					'fnDrawCallBack': function( oSettings ){
+						var i = 0, 
+						    iLen=oSettings.aiDisplay.length;
+						if ( oSettings.bSorted || oSettings.bFiltered ){
+							for ( ; i<iLen; i++){
+								var nTr = oSettings.aoData[ oSettings.aiDisplay[i]].nTr;
+								this.fnUpdate(i+1, nTr, 0, false, false)
+							}
+						}
+					},
+					'aoColumnDefs': [
+						{'bSortable': false, 'sClass': 'index', aTargets: [0]}
+					],
+					'aaSorting': [[0, 'asc']]
+				});
+				new FixedColumns(oTable);
+			});
+			
+			$('.navigation > li').hover(function () {
+   				$('a',$(this)).stop().animate({'marginLeft':'-75px', 'width': '80px'},200);
+  			},
+  			function () {
+   				$('a',$(this)).stop().animate({'marginLeft':'-15px', 'width': '20px'},200);
+  			}
+ 			);
+		</script>
+	</body>
+</html>

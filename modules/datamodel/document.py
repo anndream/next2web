@@ -27,6 +27,12 @@ class Document(BaseModel):
             Field('doc_definition_hash', 'string', length=32),
         ]
         
+    def set_visibility(self):
+        self.entity.doc_name.writable = False
+        self.entity.doc_propertiesmeta.readable = False
+        self.entity.doc_data_hash.writable = False
+        self.entity.doc_definition_hash.writable = False
+        
 class DocumentField(BaseModel):
     tablename = 'tabDocumentField'
     def set_properties(self):

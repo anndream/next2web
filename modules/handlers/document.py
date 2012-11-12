@@ -426,11 +426,10 @@ class Document(Base):
     
     def define_virtual_table(self):
         from gluon.dal import Table, DAL
-        [self.fields[x].field for x in self.fields]
         table = Table(
             DAL(None),
             self.meta.doc_name,
-            *[self.fields[x]._field for x in self.fields]
+            *self.define_fields(True)
         )
         return table
     
@@ -441,12 +440,9 @@ class Document(Base):
         for field in self.fields.values():
             if field.meta:
                 if not with_form_fields and self.meta.df_type!='virtual':
-                    fields.append(field)
+                    fields.append(field.field)
                 elif with_form_fields:
-                    fields.append(field)
-        if fields:
-            from gluon.dal import Field
-            fields.append(Field('status', 'integer'))
+                    fields.append(field.field)
         return fields
     
     def define_visibility(self):

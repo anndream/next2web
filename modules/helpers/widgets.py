@@ -170,7 +170,7 @@ class Link(object):
         if hasattr(self.request, 'application'):
             self.url_form = URL(args=[self.request.args], vars={'__meta_form': True})
             self.url_keyword = URL(args=[self.request.args], vars={'__meta_keywords': True})
-            #self.callback()
+            self.callback()
         else:
             self.url_form = self.request
             self.url_keyword = self.request
@@ -198,7 +198,7 @@ class Link(object):
     def callback(self):
         from gluon.http import HTTP
         from gluon.html import FORM, INPUT, DIV, A, I, SELECT, OPTION, SCRIPT, TAG, P, BUTTON
-        
+
         if '__meta__form' in self.request.vars:
             doc_fields = []
             for doc_field in self.document.meta.doc_search_fields:
@@ -293,7 +293,7 @@ class Link(object):
                 )
             )
             raise HTTP(200, TAG[''](form, script).xml())
-        if '__meta__keywords' in self.request.vars:
+        elif '__meta__keywords' in self.request.vars:
             del self.request.vars['__meta_keywords']
             query = self.build_query()
             rows = self.db.executesql('SELECT * FROM %s WHERE %s'%(self.table, str(query)), as_dict=True)
@@ -601,13 +601,12 @@ class Document(DIV):
     def build_page_content(self):
         #SQLFORM.formstyles.document = self.formstyle_document
         #SQLFORM.widgets = widgets
-        print(self.document.vtable, type(self.document.vtable))
-        print(self.document.vtable.fields)
         new_form = SQLFORM( 
-            self.document.vtable,
-            self.document.data or None,
+            self.document._db.Document,
+            self.document.meta or None,
             submit_button = self.submit_button,
             formstyle='bootstrap',
+            showid=False
         )
         return DIV(
                    new_form, 

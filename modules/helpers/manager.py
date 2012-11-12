@@ -5,7 +5,7 @@ from gluon.sqlhtml import SQLFORM
 from gluon.storage import Storage
 from gluon.contrib.simplejson import loads, dumps
 
-from helpers.document import types, policy
+from helpers.document import types, vtypes, policy
 
 
 
@@ -44,8 +44,8 @@ class Manager(object):
     def dump(self):
         data = self._data
         if self.options:
-            self.data['options'] = self.options
-        return {'name': self.name, data: data}
+            data['options'] = self.options
+        return {'name': self.name, 'data': data}
 
 class PolicyManager(Manager):
     def __init__(self, data):
@@ -57,12 +57,14 @@ class PolicyManager(Manager):
             
     
 class TypeManager(Manager):
+    types = types
+    types.update(vtypes)
     
     def __init__(self, name, data={}):
-        assert name in types, 'Cold not find type %s in common types'%`type`
+        assert name in self.types, 'Cold not find type %s in common types'%`name`
             
         self.name = name
-        self._data = data
+        self._data = data if data else {}
         self.options = types[name]
         self.fields = []
         

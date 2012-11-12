@@ -43,6 +43,7 @@ class DocumentField(BaseModel):
         
         self.fields = [
             Field('document', 'reference tabDocument', notnull=True),
+            Field('idx', 'integer', notnull=True, default=1),
             Field('df_name', 'string', notnull=True),
             Field('df_type', 'string', notnull=True),
             Field('df_length', 'integer'),

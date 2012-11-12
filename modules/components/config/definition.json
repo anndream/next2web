@@ -1,27 +1,47 @@
-{
+[{
 	"doc_name": "document",
 	"doc_title": "Document",
 	"doc_description": "The Document is the smallest part of the data set next2web, here you can manage and control all other documents, including, removing, hiding, showing fields to the forms.",
 	"doc_tablename": "tabDocument",
 	"doc_fields": [
 		{
+			"idx": 1,
+			"df_name": "doc_section_1",
+			"df_type": "sectionbreak",
+			"df_label": ""
+		},
+		{
+			"idx": 2,
+			"df_name": "doc_column_1_1",
+			"df_type": "columnbreak"
+		},
+		{
+			"idx": 3,
 			"df_name": "doc_name",
 			"df_type": "string",
 			"df_policy": "rwun",
 			"df_label": "Name of Document"
 		},
 		{
+			"idx": 4,
 			"df_name": "doc_title",
-			"df_type": "text",
+			"df_type": "smalltext",
 			"df_policy": "rwun",
 			"df_label": "Title of Document"
 		},
 		{
+			"idx": 5,
 			"df_name": "doc_description",
-			"df_type": "text",
+			"df_type": "smalltext",
 			"df_label": "Description"
 		},
 		{
+			"idx": 6,
+			"df_name": "doc_column_break_1_2",
+			"df_type": "columnbreak"
+		},
+		{
+			"idx": 7,
 			"df_name": "doc_parent",
 			"df_type": "link",
 			"df_policy": "rw",
@@ -32,82 +52,98 @@
 			}
 		},
 		{
+			"idx": 8,
 			"df_name": "doc_tablename",
 			"df_type": "string",
 			"df_policy": "rwun",
 			"df_label": "Table Name"
 		},
 		{
+			"idx": 9,
 			"df_name": "doc_propertiesmeta",
 			"df_type": "text",
 			"df_policy": ""
 		}
-	],
-	"childs": {
-		"tabDocumentField": [
-			{
-				"df_name": "document",
-				"df_type": "link",
-				"df_policy": "n",
-				"df_typemeta": {
-					"document": "document",
-					"label": "doc_name"
-				}
-			},
-			{
-				"df_name": "df_name",
-				"df_type": "string",
-				"df_policy": "rwupn",
-				"df_label": "Field Name"
-			},
-			{
-				"df_name": "df_type",
-				"df_type": "string",
-				"df_policy": "rwn",
-				"df_label": "Field Type"
-			},
-			{
-				"df_name": "df_length",
-				"df_type": "integer",
-				"df_label": "Length"
-			},
-			{
-				"df_name": "df_default",
-				"df_type": "string",
-				"df_label": "Default Value" 
-			},
-			{
-				"df_name": "df_policy",
-				"df_type": "string",
-				"df_default": "rw",
-				"df_label": "Policy"
-			},
-			{
-				"df_name": "df_label",
-				"df_type": "string",
-				"df_policy": "rwn"
-			},
-			{
-				"df_name": "df_description",
-				"df_type": "text",
-				"df_length": 50,
-				"df_label": "Description"
-			},
-			{
-				"df_name": "df_represent",
-				"df_type": "string",
-				"df_label": "Representation"
-			},
-			{
-				"df_name": "df_typemeta",
-				"df_type": "text",
-				"df_policy": ""
-			},
-			{
-				"df_name": "df_validatorsmeta", 
-				"df_type": "text",
-				"df_policy": ""
+	]
+},
+{
+	"doc_name": "Field",
+	"doc_title": "Document Field",
+	"doc_tablename": "tabDocumentField",
+	"doc_fields": [
+		{
+			"idx": 1,
+			"df_name": "document",
+			"df_type": "link",
+			"df_policy": "n",
+			"df_typemeta": {
+				"document": "document",
+				"label": "doc_name"
 			}
-		]
-	}
-}
+		},
+		{
+			"idx": 2,
+			"df_name": "df_name",
+			"df_type": "string",
+			"df_policy": "rwupn",
+			"df_label": "Field Name"
+		},
+		{
+			"idx": 3,
+			"df_name": "df_type",
+			"df_type": "string",
+			"df_policy": "rwn",
+			"df_label": "Field Type"
+		},
+		{
+			"idx": 4,
+			"df_name": "df_length",
+			"df_type": "integer",
+			"df_label": "Length"
+		},
+		{
+			"idx": 5,
+			"df_name": "df_default",
+			"df_type": "string",
+			"df_label": "Default Value" 
+		},
+		{
+			"idx": 6,
+			"df_name": "df_policy",
+			"df_type": "string",
+			"df_default": "rw",
+			"df_label": "Policy"
+		},
+		{
+			"idx": 7,
+			"df_name": "df_label",
+			"df_type": "string",
+			"df_policy": "rwn"
+		},
+		{
+			"idx": 8,
+			"df_name": "df_description",
+			"df_type": "text",
+			"df_length": 50,
+			"df_label": "Description"
+		},
+		{
+			"idx": 9,
+			"df_name": "df_represent",
+			"df_type": "string",
+			"df_label": "Representation"
+		},
+		{
+			"idx": 10,
+			"df_name": "df_typemeta",
+			"df_type": "text",
+			"df_policy": ""
+		},
+		{
+			"idx": 11,
+			"df_name": "df_validatorsmeta", 
+			"df_type": "text",
+			"df_policy": ""
+		}
+	]
+}]

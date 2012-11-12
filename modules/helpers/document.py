@@ -43,6 +43,7 @@ types = Storage({
     'string': Storage({
         'native': 'string',
         '_class': 'string',
+        'ui_type': 'text',
         'label': T('Data'),
     }),
     'text': Storage({
@@ -220,7 +221,7 @@ vtypes = Storage({
 def _loader(db, table, data, document=None):
     if isinstance(data, list):
         for row in data:
-            _loader(table, row, document)
+            _loader(db, table, row, document)
     elif isinstance(data, dict):
         if document:
             data['document'] = document
@@ -231,16 +232,12 @@ def _solve_definition(db, table, data, document=None):
     for definition in data:
         parent = _loader(db, table, definition, document)
         if definition.has_key('doc_fields'):
-            _loader(db, 'doc_fields', definition['doc_fields'], parent)
-        if definition.has_key('childs'):
-            childs = definition['childs']
-            for child in childs:
-                _solve_definition(db, child, childs[child], parent)
-
+            _loader(db, 'tabDocumentField', definition['doc_fields'], parent)
 
 def load_definition(db, filename):
     data = loads(open(filename).read())
     _solve_definition(db, 'tabDocument', data)
+    db.commit();
    
 def load_data(db, filename):
     pass

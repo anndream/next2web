@@ -212,7 +212,7 @@ class Document(Base):
         query = self._db.DocumentField.document==self.meta
         if only_active:
             query = query & (self._db.DocumentField.is_active==True)
-        return self._db(query).select()
+        return self._db(query).select(orderby=self._db.DocumentField.idx)
     
     def list_childs(self):
         if not self.meta and not self.has_childs():
@@ -549,6 +549,7 @@ class DocumentField(Base):
         self.auth = self.context.auth = self.app.auth
         self._parent = None
         self._field = None
+        self._vfield = None
         self.meta = None
         self.meta_type = None
         self.meta_validators = None  
@@ -570,7 +571,7 @@ class DocumentField(Base):
     
     @property
     def vfield(self):
-        return self.bluid_virtual_field()
+        return self.build_virtual_field()
     
     @vfield.setter
     def vfield(self, value):
@@ -625,6 +626,7 @@ class DocumentField(Base):
                 length=self.meta.df_length,
                 default=self.meta.df_default,
             )
+        self._field.readable, self._field.writable = self.define_field_visibility()
         return self._field
         
     def define_field_visibility(self):
@@ -654,7 +656,7 @@ class DocumentField(Base):
         if not self.meta:
             raise DocumentFieldNotLoaded
         
-        if self.meta.df_represent.startswith('eval:'):
+        if self.meta.df_represent and self.meta.df_represent.startswith('eval:'):
             return eval(self.meta.df_represent.replace('eval:', ''))
         else:
             return self.meta.df_represent
@@ -684,6 +686,10 @@ class DocumentField(Base):
             self._vfield.comments = self.define_field_comments()
             self._vfield.requires = self.define_field_validations()
         return self._vfield
+    
+    def is_readable(self):
+        from helpers.document import policy_readable
+        return policy_readable in self.meta.df_policy
     
     def has_field_options(self):
         if not self.meta:

@@ -6,7 +6,7 @@ Created on 25/10/2012
 @author: INFRA-PC1
 '''
 
-from gluon.sqlhtml import FormWidget, StringWidget, TextWidget, \
+from gluon.sqlhtml import StringWidget, TextWidget, \
 OptionsWidget, ListWidget, RadioWidget, CheckboxesWidget, PasswordWidget, \
 UploadWidget, AutocompleteWidget
 
@@ -19,16 +19,44 @@ T = current.T
 
 pretty = lambda s: s.replace('default', str(T('Home'))).replace('_', ' ').capitalize()
 
-class String(StringWidget):
+class FormWidget(object):
+    _class= 'generic-widget'
+    
+    @classmethod
+    def _attributes(cls, document, doc_field, widget_attributes, **attributes):
+        print "wgt", widget_attributes
+        print 'att', attributes
+        attr = dict(
+            _id = '%s_%s' % (document.meta.doc_name, doc_field.meta.df_name),
+            _class = cls._class or types[doc_field.meta.df_type]._class,
+            _name = doc_field.meta.df_name,
+            requires = doc_field.field.requires,
+        )
+        print 'upd', attr
+        attr.update(widget_attributes)
+        attr.update(attributes)
+        return attr
+    
+    @classmethod
+    def widget(cls, document, doc_field, value, **attributes):
+        raise NotImplementedError
+
+class String(FormWidget):
     _class = types.string._class
     
     @classmethod
-    def widget(cls, df, value, **attrs):
-        data = df.meta_type.dump()['data'] or (df.meta_type.default() or None)
-        if data:
-            attrs['_data-type'] = `data`
-        
-        return StringWidget.widget(df.field, value, **attrs)
+    def widget(cls, document, df, value, **attrs):
+        from gluon.html import INPUT
+        #data = df.meta_type.dump()['data'] or (df.meta_type.default() or None)
+        #if data:
+        #    attrs['_data-type'] = data
+        default = dict (
+            _type = types[df.meta.df_type].ui_type,
+            value = (not value is None and str(value)) or ''
+        )
+        attr = cls._attributes(document, df, default, **attrs)
+        print attr
+        return INPUT(**attr)
     
 class Integer(String):
     _class = types.integer._class
@@ -459,10 +487,10 @@ widgets = Storage(
     button = Button,
 )
 
-from gluon.sqlhtml import SQLFORM
 from gluon.html import DIV
 
-class Document(DIV):    
+class Document(DIV):
+    widgets = widgets
     def __init__(self,
         document,
         submit_button = T('Save'),
@@ -486,30 +514,48 @@ class Document(DIV):
     def formstyle_document_help(self, strhelp):
         from gluon.html import SPAN, A, I
         
-        if len(help)<=30:
-            return SPAN(strhelp, _class='help-block')
+        if len(strhelp or '')<=30:
+            return SPAN(strhelp or '', _class='help-block')
         else:
             attrs = {
                 '_data-animation': 'true',
                 '_data-placement': 'bottom',
                 '_data-trigger': 'hover',
-                '_data-content': strhelp,
+                '_data-content': strhelp or '',
                 
             }
             return SPAN( A(I(_class='icon-exclamation-sign'), **attrs), _class='help-block')
         
-    def formstyle_document(self, form, fields):
-        from gluon.html import H3, P, BUTTON
+    def formstyle_document(self):
+        from gluon.html import H3, P, BUTTON, LABEL
+        
+        data = []
+        
+        for doc_field in self.document.fields.values():
+            _id = '%s__%s'%(self.document.meta.doc_name, doc_field.meta.df_name) 
+            _label = LABEL(doc_field.meta.df_label, _for = doc_field.meta.df_name)
+            _controls = self.widgets['string' or doc_field.meta.df_type].widget(self.document, doc_field, self.document.data[doc_field.meta.df_name] if self.document.data else '')
+            _help = self.formstyle_document_help(doc_field.meta.df_description)
+            data.append(
+                DIV(
+                    _label,
+                    _controls,
+                    _help,
+                    _class='control-group'
+                )
+            )
+        return data
         
         _sections = []
-        sections = [(i, doc_field) for i, doc_field in filter(lambda x: x[1].meta.df_type=='sectionbreak', enumerate(self.document.fields))]
+        sections = [(doc_field.meta.idx, doc_field) for doc_field in filter(lambda x: x.meta.df_type=='sectionbreak', self.document.fields.values())]
         for x, (i, section) in enumerate(sections):
             _nxt = sections[x+1][0] if len(sections) < (x+1) else len(self.document.fields)+1
             columns = []
             content = []
             has_left_column = False
-            doc_fields = filter(lambda x: x[0]>i and x[0]<_nxt, enumerate(self.document.fields))
-            for n, doc_field in doc_fields:
+    
+            doc_fields = filter(lambda x: x.meta.idx>i and x.meta.idx<_nxt, self.document.fields.values())
+            for doc_field in doc_fields:
                 if not doc_field.meta.df_type=='columnbreak':
                     if doc_field.meta.df_type == 'table':
                         pass
@@ -525,16 +571,21 @@ class Document(DIV):
                                 _class="control-group"
                             )
                         )
+                        continue
                     else:                        
-                        _id, _label, _controls, _help = fields.pop(0)
+                        _id = '%s__%s'%(self.document.meta.doc_name, doc_field.meta.df_name) 
+                        _label = LABEL(doc_field.meta.df_label, _for = doc_field.meta.df_name)
+                        _controls = self.widgets['string' or doc_field.meta.df_type].widget(self.document, doc_field, self.document.data[doc_field.meta.df_name] if self.document.data else '')
+                        _help = self.formstyle_document_help(doc_field.meta.df_description)
                         content.append(
                             DIV(
                                 _label,
                                 _controls,
-                                self.formstyle_document_help(_help),
+                                _help,
                                 _class='control-group'
                             )
                         )
+                        continue
                 elif doc_field.meta.df_type=='columnbrek':
                     columns.append(
                         DIV(
@@ -544,21 +595,23 @@ class Document(DIV):
                     )
                     has_left_column = (content and not has_left_column)
                     content = []
-                if doc_field == doc_fields[-1][1] and len(columns)>0:
+                    continue
+                if doc_field == doc_fields[-1] and len(columns)>0:
                     columns.append(
                         DIV(
                             *content,
                             _class='content-column column-right'
                         )
                     )
+                    continue
             
             if not columns:
                 columns = DIV(*content, _class='content-column')
                 
-            sections.append(DIV(
+            _sections.append(DIV(
                     DIV(
-                        H3(section.vfield.label),
-                        P(section.vfield.comments),
+                        H3(sections[x].vfield.label),
+                        P(sections[x].vfield.comments),
                         _class='section-header'
                     ),
                     DIV(
@@ -567,7 +620,7 @@ class Document(DIV):
                     )
                 )
             )
-        return DIV(*sections)
+        return DIV(*_sections)
     
     
     def build_page(self):
@@ -599,17 +652,9 @@ class Document(DIV):
         )
 
     def build_page_content(self):
-        #SQLFORM.formstyles.document = self.formstyle_document
-        #SQLFORM.widgets = widgets
-        new_form = SQLFORM( 
-            self.document._db.Document,
-            self.document.meta or None,
-            submit_button = self.submit_button,
-            formstyle='bootstrap',
-            showid=False
-        )
+        from gluon.html import FORM
         return DIV(
-                   new_form, 
+                   FORM(self.formstyle_document()), 
                    DIV(_class='dialogs'),
                    _class='page-content'
                 )

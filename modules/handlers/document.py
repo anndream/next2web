@@ -650,7 +650,7 @@ class DocumentField(Base):
         if not self.meta:
             raise DocumentFieldNotLoaded
         
-        return self.meta.df_label
+        return self.meta.df_label or ''
              
     def define_field_representation(self):
         if not self.meta:

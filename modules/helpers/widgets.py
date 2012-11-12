@@ -24,15 +24,12 @@ class FormWidget(object):
     
     @classmethod
     def _attributes(cls, document, doc_field, widget_attributes, **attributes):
-        print "wgt", widget_attributes
-        print 'att', attributes
         attr = dict(
             _id = '%s_%s' % (document.meta.doc_name, doc_field.meta.df_name),
             _class = cls._class or types[doc_field.meta.df_type]._class,
             _name = doc_field.meta.df_name,
             requires = doc_field.field.requires,
         )
-        print 'upd', attr
         attr.update(widget_attributes)
         attr.update(attributes)
         return attr

@@ -35,3 +35,14 @@ errors/*
 errors/**
 errors**/*
 
+#Web2py Sessions
+sessions
+sessions/*
+sessions/**
+sessions**/*
+
+#Web2py Storages
+databases
+databases/*
+databases/**
+databases**/*

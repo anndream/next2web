@@ -114,7 +114,6 @@ ul.navigation li a {
 	padding-left: 20px;
 	padding-right: 20px;
 	*zoom: 1;
-	
 }
 
 .page-content:after, .page-content:before {
@@ -129,6 +128,7 @@ ul.navigation li a {
 
 .content-column {
 	width: 300px;
+	padding-right: 15px;
 }
 
 .content-column.column-left {
@@ -139,7 +139,8 @@ ul.navigation li a {
 	float: right;
 }
 
-.section {
+.sectionbreak {
+	padding-top: 15px;
 	border-bottom: 1px solid #eee;
 }
 
@@ -171,7 +172,7 @@ ul.navigation li a {
 }
 
 input.string, input.integer, input.double, input.decimal, textarea.smalltext {
-	width: 100%;
+	width: 280px;
 }
 
 input.time, input.datetime, input.date, input.upload-text {

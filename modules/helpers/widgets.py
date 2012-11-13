@@ -15,17 +15,28 @@ from gluon import current
 
 from helpers.document import types, vtypes
 
+from gluon.html import *
+
 T = current.T
 
 pretty = lambda s: s.replace('default', str(T('Home'))).replace('_', ' ').capitalize()
 
 class FormWidget(object):
     _class= 'generic-widget'
+    _row_id_sufix = '_row'
     
     @classmethod
-    def _attributes(cls, document, doc_field, widget_attributes, **attributes):
+    def label(cls, df):
+        return LABEL(df.meta.df_label, _for = df.meta.df_name) if df.meta.df_label else TAG['']
+    
+    @classmethod
+    def control(cls, **attrs):
+        raise NotImplementedError
+    
+    @classmethod
+    def _attributes(cls, doc_field, widget_attributes, **attributes):
         attr = dict(
-            _id = '%s_%s' % (document.meta.doc_name, doc_field.meta.df_name),
+            _id = '%s_%s' % (doc_field.parent.doc_name, doc_field.meta.df_name),
             _class = cls._class or types[doc_field.meta.df_type]._class,
             _name = doc_field.meta.df_name,
             requires = doc_field.field.requires,
@@ -35,24 +46,28 @@ class FormWidget(object):
         return attr
     
     @classmethod
-    def widget(cls, document, doc_field, value, **attributes):
-        raise NotImplementedError
-
-class String(FormWidget):
-    _class = types.string._class
-    
-    @classmethod
-    def widget(cls, document, df, value, **attrs):
-        from gluon.html import INPUT
+    def widget(cls, df, value, **attrs):
         #data = df.meta_type.dump()['data'] or (df.meta_type.default() or None)
         #if data:
         #    attrs['_data-type'] = data
+        
+        _id = '%s__%s'%(df.meta.df_name, cls._row_id_sufix) 
+        return DIV(cls.label(df), cls.control(df, value, **attrs), widget_help(df.meta.df_description), _id=_id,  _class='control-group'
+        )
+        
+        
+class String(FormWidget):
+    _class = types.string._class
+    _type = 'text'
+    
+    @classmethod
+    def control(cls, df, value, **attrs):
         default = dict (
-            _type = types[df.meta.df_type].ui_type,
+            _type = cls._type,
             value = (not value is None and str(value)) or ''
         )
-        attr = cls._attributes(document, df, default, **attrs)
-        print attr
+        attr = cls._attributes(df, default, **attrs)
+        
         return INPUT(**attr)
     
 class Integer(String):
@@ -64,28 +79,38 @@ class Double(StringWidget):
 class Decimal(String):
     _class = types.decimal._class
     
-class Currency(String):
-    _class = types.currency._class
-    
 class Date(String):
     _class = types.date._class
+    prepend = SPAN(I(_class='icon-calendar'), _class='add-on'),
     
-class Time(String):
+    @staticmethod
+    def control(cls, df, value, **attributes):
+        widget = String.control( df, value, **attributes)
+        _class = 'input-prepent %s-control'%df.meta.df_type
+        return DIV(cls.prepend, widget, _class=_class)
+    
+class Time(Date):
     _class = types.time._class
+    prepend = SPAN(I(_class='icon-time'), _class='add-on')
     
-class Datetime(String):
+class Datetime(Date):
     _class = types.datetime._class
+    prepent = SPAN(I(_class='icon-calendar'), _class='add-on')
     
-class Text(TextWidget):
+class Currency(Date):
+    _class = types.currency._class
+    prepent = SPAN(T('R$'), _class='add-on')
+    
+class Text(FormWidget):
     _class = types.text._class
     
     @classmethod
-    def widget(cls, df, value, **attrs):
-        data = df.meta_type.dump()['data']
-        if data:
-            attrs['_data-type'] = `data`        
-        
-        return TextWidget.widget(df.field, value, **attrs)
+    def control(cls, df, value, **attrs):
+        #data = df.meta_type.dump()['data']
+        #if data:
+        #    attrs['_data-type'] = `data`
+        attrs = cls._attributes(df, {'valeu': value}, **attrs)
+        return TEXTAREA(**attrs) 
     
 class Smalltext(Text):
     _class = types.smalltext._class
@@ -178,7 +203,6 @@ class Link(object):
                       )
         
     def __init__(self, document, doc_field):
-        from gluon.html import URL
         self.document = document
         self.doc_field = self.document.fields[doc_field] if isinstance(doc_field, basestring) else doc_field
         
@@ -222,8 +246,6 @@ class Link(object):
     
     def callback(self):
         from gluon.http import HTTP
-        from gluon.html import FORM, INPUT, DIV, A, I, SELECT, OPTION, SCRIPT, TAG, P, BUTTON
-
         if '__meta__form' in self.request.vars:
             doc_fields = []
             for doc_field in self.document.meta.doc_search_fields:
@@ -333,7 +355,6 @@ class Link(object):
                 raise HTTP(200, DIV(T('No results found', _class='no-results')).xml())
 
     def __call__(self, df, value, **attributes):
-        from gluon.html import DIV, INPUT, A, I, TAG, H3, BUTTON, XML, SCRIPT
         default = dict(
             _type="text",
             value = (not value is None and str(value)) or '',
@@ -403,9 +424,9 @@ class Virtual(FormWidget):
     @classmethod
     def _attributes(cls, df, widget_attrs, **attrs):
         attr = dict(
-            _id= '%s_%s'%(df.parent.doc_name, df.df_name),
+            _id= '%s_%s'%(df.parent.doc_name, df.meta.df_name),
             _class = cls._class,
-            _name = df.df_name,        
+            _name = df.meta.df_name,        
         )
         attr.update(widget_attrs)
         attr.update(attrs)
@@ -420,37 +441,32 @@ class Table(Virtual):
     _class = vtypes.table._class
     
     @classmethod
-    def widget(cls, df, **attrs):
-        from gluon.html import DIV
-        
+    def widget(cls, df, value, **attrs):        
         attr = cls._attributes(df, {}, **attrs)
         
         return DIV(df.get_child(df.meta_type.get_option('child')), **attr)
     
 class SectionBreak(Virtual):
-    _class = vtypes.sectionbreak._class
+    _class = vtypes.sectionbreak._class + ' row-fluid'
     
     @classmethod
-    def widget(cls, df, **attrs):
-        from gluon.html import H2, P, DIV
+    def widget(cls, doc_field, value, **attrs):        
+        attr = cls._attributes(doc_field, {}, **attrs)
         
-        attr = cls._attributes(df, {}, **attrs)
-        
-        return DIV(H2(df.label), P(df.df_descricao), **attr)
+        return DIV(H2(doc_field.meta.df_label) if doc_field.meta.df_label else '', P(doc_field.meta.df_description) if doc_field.meta.df_description else '', **attr)
     
 class ColumnBreak(Virtual):
-    _class = vtypes.sectionbreak._class
+    _class = vtypes.columnbreak._class + " span6"
     
     @classmethod
-    def widget(cls, df, **attrs):
-        pass
+    def widget(cls, df, value, **attrs):
+        return DIV(*[],_class=cls._class)
     
 class Button(Virtual):
     _class = vtypes.button._class
     
     @classmethod
     def widget(cls, df, **attrs):
-        from gluon.html import DIV
         
         attr = cls._attributes(df, {}, **attrs)
         
@@ -479,15 +495,27 @@ widgets = Storage(
     upload = Filelink,
     suggest = Suggest,
     table = Table,
-    sectionbreack = SectionBreak,
-    columnbreack = ColumnBreak,
+    sectionbreak = SectionBreak,
+    columnbreak = ColumnBreak,
     button = Button,
 )
 
-from gluon.html import DIV
+def widget_help(strhelp):        
+    if len(strhelp or '')<=30:
+        return SPAN(strhelp or '', _class='help-block')
+    else:
+        attrs = {
+            '_data-animation': 'true',
+            '_data-placement': 'bottom',
+            '_data-trigger': 'hover',
+            '_data-content': strhelp or '',
+            
+        }
+        return SPAN( A(I(_class='icon-exclamation-sign'), **attrs), _class='help-block')
+
+
 
 class Document(DIV):
-    widgets = widgets
     def __init__(self,
         document,
         submit_button = T('Save'),
@@ -508,9 +536,7 @@ class Document(DIV):
         
         self.components.append(self.build_page())
         
-    def formstyle_document_help(self, strhelp):
-        from gluon.html import SPAN, A, I
-        
+    def formstyle_document_help(self, strhelp):        
         if len(strhelp or '')<=30:
             return SPAN(strhelp or '', _class='help-block')
         else:
@@ -523,102 +549,56 @@ class Document(DIV):
             }
             return SPAN( A(I(_class='icon-exclamation-sign'), **attrs), _class='help-block')
         
-    def formstyle_document(self):
-        from gluon.html import H3, P, BUTTON, LABEL
+    def formstyle_document(self):        
+        _names = self.document._ordered_fields
+        i = 0
+        element = TAG['']()
         
-        data = []
+        def _column_break(widget, i):
+            print widget
+            _type = _type = self.document.fields[_names[i]].meta.df_type
+            while i < len(_names) and _type not in ('sectionbreak', 'columnbreak'):
+                subwidget = widgets[_type if _type in ('sectionbreak', 'columnbreak') else 'string'].widget(self.document.fields[_names[i]], self.document.data[_names[i]] if self.document.data else '' )
+                widget.components.append(subwidget)
+                if (i+1) >= len(_names) or self.document.fields[_names[i+1]].meta.df_type in  ('sectionbreak', 'columnbreak') : 
+                    break
+                else:
+                    i += 1
+                    _type = self.document.fields[_names[i]].meta.df_type
+            return widget, i
         
-        for doc_field in self.document.fields.values():
-            _id = '%s__%s'%(self.document.meta.doc_name, doc_field.meta.df_name) 
-            _label = LABEL(doc_field.meta.df_label, _for = doc_field.meta.df_name)
-            _controls = self.widgets['string' or doc_field.meta.df_type].widget(self.document, doc_field, self.document.data[doc_field.meta.df_name] if self.document.data else '')
-            _help = self.formstyle_document_help(doc_field.meta.df_description)
-            data.append(
-                DIV(
-                    _label,
-                    _controls,
-                    _help,
-                    _class='control-group'
-                )
-            )
-        return data
+        def _section_break(widget, i):
+            _type = self.document.fields[_names[i]].meta.df_type
+            while i < len(_names) and _type != 'sectionbreak':
+                subwidget = widgets[_type if _type in ('sectionbreak', 'columnbreak') else 'string'].widget(self.document.fields[_names[i]], self.document.data[_names[i]] if self.document.data else '' )
+                if _type == 'columnbreak':
+                    subwidget, i = _column_break(subwidget, i+1)
+                widget.components.append(subwidget)
+                if (i+1) >= len(_names) or self.document.fields[_names[i+1]].meta.df_type == 'sectionbreak': 
+                    break
+                else:
+                    i += 1
+                    _type = self.document.fields[_names[i]].meta.df_type
+            return widget, i
         
-        _sections = []
-        sections = [(doc_field.meta.idx, doc_field) for doc_field in filter(lambda x: x.meta.df_type=='sectionbreak', self.document.fields.values())]
-        for x, (i, section) in enumerate(sections):
-            _nxt = sections[x+1][0] if len(sections) < (x+1) else len(self.document.fields)+1
-            columns = []
-            content = []
-            has_left_column = False
-    
-            doc_fields = filter(lambda x: x.meta.idx>i and x.meta.idx<_nxt, self.document.fields.values())
-            for doc_field in doc_fields:
-                if not doc_field.meta.df_type=='columnbreak':
-                    if doc_field.meta.df_type == 'table':
-                        pass
-                    elif doc_field.meta.df_type == 'button':
-                        content.append(
-                            DIV(
-                                BUTTON(
-                                  doc_field.vfield.label,
-                                  _class='btn'
-                                ),
-                                
-                                self.formstyle_document_help(doc_field.vfield.comments),
-                                _class="control-group"
-                            )
-                        )
-                        continue
-                    else:                        
-                        _id = '%s__%s'%(self.document.meta.doc_name, doc_field.meta.df_name) 
-                        _label = LABEL(doc_field.meta.df_label, _for = doc_field.meta.df_name)
-                        _controls = self.widgets['string' or doc_field.meta.df_type].widget(self.document, doc_field, self.document.data[doc_field.meta.df_name] if self.document.data else '')
-                        _help = self.formstyle_document_help(doc_field.meta.df_description)
-                        content.append(
-                            DIV(
-                                _label,
-                                _controls,
-                                _help,
-                                _class='control-group'
-                            )
-                        )
-                        continue
-                elif doc_field.meta.df_type=='columnbrek':
-                    columns.append(
-                        DIV(
-                            *content,
-                            _class='content-column ' + ('column-left' if has_left_column else 'column-right')
-                        )
-                    )
-                    has_left_column = (content and not has_left_column)
-                    content = []
-                    continue
-                if doc_field == doc_fields[-1] and len(columns)>0:
-                    columns.append(
-                        DIV(
-                            *content,
-                            _class='content-column column-right'
-                        )
-                    )
-                    continue
+        while i < len(_names):
+            _type = self.document.fields[_names[i]].meta.df_type
+            wgt = widgets[_type if _type in ('sectionbreak', 'columnbreak') else 'string'].widget(self.document.fields[_names[i]], self.document.data[_names[i]] if self.document.data else '' )
+            if _type == 'sectionbreak':
+                subwgt, i = _section_break(wgt, i+1)
+                i += 1
+                element.components.append(subwgt)
+                continue
+            elif _type == 'columnbrek':
+                subwgt, i = _column_break(wgt, i+1)
+                i += 1
+                element.components.append(subwgt)
+                continue
+            else:
+                element.components.append(wgt)
+            i += 1
             
-            if not columns:
-                columns = DIV(*content, _class='content-column')
-                
-            _sections.append(DIV(
-                    DIV(
-                        H3(sections[x].vfield.label),
-                        P(sections[x].vfield.comments),
-                        _class='section-header'
-                    ),
-                    DIV(
-                        *columns,
-                        _class='section-content'
-                    )
-                )
-            )
-        return DIV(*_sections)
-    
+        return element
     
     def build_page(self):
         return DIV(
@@ -628,7 +608,6 @@ class Document(DIV):
         )
         
     def build_page_header(self):
-        from gluon.html import H1, A, UL, LI, TAG, XML, URL, I
         
         menus = [LI(A(I(_class="icon-home"), _title=T('Home'), _href=URL(r=self.request, c='default', f='index')))]
         
@@ -649,7 +628,6 @@ class Document(DIV):
         )
 
     def build_page_content(self):
-        from gluon.html import FORM
         return DIV(
                    FORM(self.formstyle_document()), 
                    DIV(_class='dialogs'),
@@ -657,7 +635,6 @@ class Document(DIV):
                 )
                 
     def buid_page_menu(self):
-        from gluon.html import UL, LI, A, I
         
         return DIV(
             UL(

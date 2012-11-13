@@ -41,6 +41,7 @@ class Document(Base):
         self.meta = None
         self._parent = None
         self._data = None
+        self._ordered_fields = []
         self.fields = Storage()
         self.childs = Storage()
         self.roles = StorageList()
@@ -212,7 +213,10 @@ class Document(Base):
         query = self._db.DocumentField.document==self.meta
         if only_active:
             query = query & (self._db.DocumentField.is_active==True)
-        return self._db(query).select(orderby=self._db.DocumentField.idx)
+        rows = self._db(query).select(orderby=self._db.DocumentField.idx)
+        if not self._ordered_fields:
+            [self._ordered_fields.append(row.df_name) for row in rows]
+        return rows
     
     def list_childs(self):
         if not self.meta and not self.has_childs():

@@ -43,7 +43,6 @@ types = Storage({
     'string': Storage({
         'native': 'string',
         '_class': 'string',
-        'ui_type': 'text',
         'label': T('Data'),
     }),
     'text': Storage({

@@ -10,15 +10,15 @@
 		<!-- BootStrap CSS -->
 		<link href="{{=URL(c='static', f='templates', args=['bootstrap','css','bootstrap.min.css'])}}" rel="stylesheet" media="screen">
 		<!-- jQuery-ui Bootstrap CSS -->
-		<link href="css/custom-theme/jquery-ui-1.8.16.custom.css" rel="stylesheet" media="screen">
+		<link href="{{=URL(c='static', f='templates', args=['bootstrap', 'css', 'custom-theme', 'jquery-ui-1.8.16.custom.css'])}}" rel="stylesheet" media="screen">
 		<!-- jQuery-ui timepicker CSS -->
-		<link href="third-party/jQuery-Timepicker/jquery-ui-timepicker-addon.css" rel="stylesheet" media="screen">
+		<!--link href="third-party/jQuery-Timepicker/jquery-ui-timepicker-addon.css" rel="stylesheet" media="screen"-->
 		<!-- Bootstrap wysihtml5 CSS -->
-		<link href="third-party/wysihtml5/bootstrap-wysihtml5-0.0.2.css" rel="stylesheet" media="screen">
+		<!--link href="third-party/wysihtml5/bootstrap-wysihtml5-0.0.2.css" rel="stylesheet" media="screen"-->
 		<!-- jQuery-Scrollpane CSS -->
-		<link href="third-party/jQuery-jScrollpane/jquery.jscrollpane.css" rel="stylesheet" media="screen">
+		<!--link href="third-party/jQuery-jScrollpane/jquery.jscrollpane.css" rel="stylesheet" media="screen"-->
 		<!-- jQuery-Select2 CSS -->
-		<link href="third-party/jQuery-Select2/select2.css" rel="stylesheet" media="screen">
+		<!--link href="third-party/jQuery-Select2/select2.css" rel="stylesheet" media="screen"-->
 		<!-- DataTables -->
 		<!--link href="third-party/DataTables/css/jquery.dataTables.css" rel="styllesheet" media="screen"-->
 		<!-- style -->
@@ -74,9 +74,9 @@
 		
 		{{include}}
 				
-		<script src="js/jquery-ui-1.9.1.custom.min.js"></script>
-		<script src="js/bootstrap.min.js"></script>
-		<script src="third-party/jQuery-Timepicker/jquery-ui-sliderAccess.js"></script>
+		<script src="{{=URL(c='static', f='templates', args=['bootstrap', 'js', 'jquery-ui-1.9.1.custom.min.js'])}}"></script>
+		<script src="{{=URL(c='static', f='templates', args=['bootstrap', 'js', 'bootstrap.min.js'])}}"></script>
+		<!--script src="third-party/jQuery-Timepicker/jquery-ui-sliderAccess.js"></script>
 		<script src="third-party/jQuery-Timepicker/jquery-ui-timepicker-addon.js"></script>
 		<script src="third-party/jQuery-iMask/iMask.js"></script>
 		<script src="third-party/wysihtml5/wysihtml5-0.3.0_rc2.min.js"></script>
@@ -176,6 +176,6 @@
    				$('a',$(this)).stop().animate({'marginLeft':'-15px', 'width': '20px'},200);
   			}
  			);
-		</script>
+		</script-->
 	</body>
 </html>

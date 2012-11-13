@@ -87,7 +87,7 @@ class TypeManager(Manager):
     
     def get_option(self, option, default=None):
         if self.has_option(option) or default!=None:
-            return self._data[option] or default
+            return self._data.get(option, default)
         else:
             raise KeyError, 'Could not find option'
         

@@ -27,7 +27,7 @@ class FormWidget(object):
     
     @classmethod
     def label(cls, df):
-        return LABEL(df.meta.df_label, _for = df.meta.df_name) if df.meta.df_label else TAG['']
+        return LABEL(df.meta.df_label, _for = df.meta.df_name) if df.meta.df_label else TAG['']()
     
     @classmethod
     def control(cls, **attrs):
@@ -183,15 +183,16 @@ class Filelink(UploadWidget):
 
 class Link(object):
     _class = types.link._class
+    _row_id_sufix = '_row'
     
     AGGREGATION = 'agg'
     CONDITION = 'condition'
     DOC_FIELD = 'doc_field'
     KEYWORD = 'keyword'
-    LIST_AGGREGATIONS = (('and', T('And')),
-                         ('or'), T('Or')
-                        )
-    LIST_CONDITIONS = (('=', T('Equals'), lambda field, value: field == value),
+    LIST_AGGREGATIONS = [('and', T('And')),
+                         (('or'), T('Or'))
+                        ]
+    LIST_CONDITIONS = [('=', T('Equals'), lambda field, value: field == value),
                        ('>', T('Greater than'), lambda field, value: field > value),
                        ('<', T('Less than'), lambda field, value: field < value),
                        ('!=', T('Not Equals'), lambda field, value: field != value),
@@ -200,29 +201,38 @@ class Link(object):
                        ('contains', T('Contains'), lambda field, value: field.like('%'+value+'%')),
                        ('start_with', T('Start with'), lambda field, value: field.like(value + '%')),
                        ('ends_with', T('Ends with'), lambda field, value: field.like('%'+value))
-                      )
+                      ]
         
-    def __init__(self, document, doc_field):
-        self.document = document
+    def __init__(self, doc_field, value, **attrs):
         self.doc_field = self.document.fields[doc_field] if isinstance(doc_field, basestring) else doc_field
         
+        self._id = '%s_%s'%(self.doc_field.meta.df_name, self._row_id_sufix)
         self.modal_id = 'modal_for_%s' % self.doc_field.meta.df_name
         self.form_id = 'form_for_%s' % self.doc_field.meta.df_name
         self.text_id = 'text_for_%s' % self.doc_field.meta.df_name
         
-        self.db = self.document.db
-        self.table = self.doc_field.meta_type.get_option('document')
+        self.db = doc_field._db
+        self.table = self.db(self.db.Document.doc_name==self.doc_field.meta_type.get_option('document')).select().first().doc_tablename
         self.label = self.doc_field.meta_type.get_option('label')
         self.help_string = self.doc_field.meta_type.get_option('help_string', False)
-        self.request = self.document.request
+        self.request = current.request
         
         if hasattr(self.request, 'application'):
-            self.url_form = URL(args=[self.request.args], vars={'__meta_form': True})
-            self.url_keyword = URL(args=[self.request.args], vars={'__meta_keywords': True})
+            self.url_form = URL(args=self.request.args, vars={'__meta_form': self._id})
+            self.url_form_js = URL(r=self.request, c=self.request.controller, f=self.request.function + '.js', vars={'__meta_form': self._id})
+            self.url_keyword = URL(args=self.request.args, vars={'__meta_keywords': self._id})
             self.callback()
         else:
             self.url_form = self.request
+            self.url_form_js = self.request
             self.url_keyword = self.request
+        print self.request.vars
+        print self.url_form
+
+    @staticmethod
+    def widget(df, value, **attrs):
+        widget = Link(df, value, **attrs)
+        return widget.build(df, value, **attrs)
 
     def build_query(self):
         query = None
@@ -246,10 +256,12 @@ class Link(object):
     
     def callback(self):
         from gluon.http import HTTP
-        if '__meta__form' in self.request.vars:
+        print self.request.extension
+        if '__meta_form' in self.request.vars and self.request.vars['__meta_form']==self._id:
+            
             doc_fields = []
-            for doc_field in self.document.meta.doc_search_fields:
-                doc_fields.append((doc_field.meta.df_name, doc_field.meta.df_label or pretty(doc_field.meta.df_name)))
+            
+            [doc_fields.append((doc_field.df_name, doc_field.df_label or pretty(doc_field.df_name))) for doc_field in self.db(self.db.DocumentField.document==self.doc_field.meta.document).select()]
             
             form = FORM(
                 DIV(
@@ -257,89 +269,14 @@ class Link(object):
                     SELECT(*[OPTION(y,_value=x) for x,y in doc_fields], _class=self.DOC_FIELD, _name=self.DOC_FIELD+'_0'),
                     SELECT(*[OPTION(x[1],_value=x[2]) for x in self.LIST_CONDITIONS], _class=self.CONDITION, _name=self.CONDITION+'_0'),
                     INPUT(_name=self.KEYWORD, _type='text', _class=self.KEYWORD+'_0'),
-                    A(
-                      I(_class='icon-add'),
-                      _class='btn btn-mini add',
-                      _href='javascrip:void(0);',
-                    ),
-                    A(
-                      I(_class='icon-remove'),
-                      _class='btn btn-mini remove',
-                      _href='javascript:void(0);',
-                    ),
                     _class='link-condition first control-group'
                 ),
                 DIV(BUTTON(I(_class='icon-search'), ' ' +str( T('Filter')), _type="submit", _class="btn"), _class="actions"),
                 _id=self.form_id,
                 _action=self.url_form
             )
-            script = SCRIPT("""
-                (function(){
-                    function add(e){
-                        if (!valid(e)) return;
-                        parent = jQuery(e)
-                        row = parent.clone(true);
-                        row.removeClass('first').insertBefore(parent.parent().find('.actions'));
-                        reorder(e.parent());
-                        row.find(':text').val('').focus();
-                    }
-                    function reorder(e){
-                        $(e).find('.link-condition').each(function(i,v){
-                           $(v).find('select, input').each(function(x,y){
-                               $(y).attr(name, $(y).attr('class') + '_' + i);
-                           }); 
-                        });
-                    }
-                    function del(e){
-                        if $(e).remove();
-                    }
-                    function valid(e){
-                        parent = $(e);
-                        if (!parent.find(':text').val()) {
-                            if (!parent.is('.error')){
-                                parent.addClass('error');
-                            }
-                            return false;
-                        };
-                        if (parent.is('.error')) parent.removeClass('error');
-                        return true;
-                    }
-                    jQuery.fn.grow_div = function(){
-                        return this.each(function(i,v){
-                            jQuery(v).find(':text').after('<a class="btn btn-mini add" href="javascript:void(0)"><i class="icon-add"></i></a>').next().click(function(){add(v);}).after('<a class="btn btn-mini remove" href="javascript:void(0)"><i class="icon-remove"></i></a>').next().click(function(){del(div);});
-                        })
-                    }
-                    jQuery('.link-condition').first().addClass('first');
-                    jQuery('#%(form_id)s').appendTo('%(moda_id)s .modal-body');
-                    jQuery('#%(form_id)s .link-condition').grow_div();
-                    jQuery('#%(form_id)s').submit(function(e){
-                        e.preventDefault();
-                        jQuery('#%(form_id)s').find('.link-condition').each(function(i,v){
-                            valid(v);
-                            if ($(v).is(':not(.first)')){
-                                $(v).find('.remove').click();
-                            }
-                        });
-                        reorder('%(form_id)s');
-                        jQuery.get('%(url)s&' + jQuery('#%(form_id)s').serialize() + '&idx=' +jQuery('#%(form_id)s').find('.link-condition').length , function(data){
-                            $('#%(modal_id)s .modal-body .link-results').html(data).show().focus();
-                            $('#%(modal_id)s .modal-body .link-results').find('.results').each(function(i,v){
-                                $(v).click(function(){
-                                    $('input[name=%(name)s]').val(%(v).data('id));
-                                    $('#%(text_id)s').val(%(v).data('label'));
-                                    $('#%(modal_id)s').modal('close');
-                                });
-                            });
-                        });
-                    });
-                    )();"""%dict(
-                     form_id=self.form_id, 
-                     modal_id=self.modal_id, 
-                     url=self.url_keyword,
-                     name=self.doc_field.meta.df_name
-                )
-            )
-            raise HTTP(200, TAG[''](form, script).xml())
+            raise HTTP(200, form.xml())
+        
         elif '__meta__keywords' in self.request.vars:
             del self.request.vars['__meta_keywords']
             query = self.build_query()
@@ -354,14 +291,17 @@ class Link(object):
             else:
                 raise HTTP(200, DIV(T('No results found', _class='no-results')).xml())
 
-    def __call__(self, df, value, **attributes):
+    def build(self, df, value, **attributes):
+        
+        label = lambda df: LABEL(df.meta.df_label or '', _for=df.meta.df_name)
+        
         default = dict(
             _type="text",
             value = (not value is None and str(value)) or '',
         )
-        _id = "%s_%s" % (df.field._tablename, df.field.name)
+        _id = "%s_%s" % (df.parent.doc_name, df.meta.df_name)
         
-        attr = StringWidget._attributes(df.field, default, **attributes)
+        attr = String._attributes(df, default, **attributes)
         
         attr['_id'] = self.text_id
         attr['_autocomplete'] = 'off'
@@ -369,36 +309,122 @@ class Link(object):
         attr['_class'] = ''
         
         name = attr['_name']
-        value = attr['_value']
+        value = attr['value']
         
         record = self.db(self.db[self.table].id==value).select(self.db[self.table].ALL).first()
         if record: 
             attr['value'] = record[self.label]
         
-        return TAG[''](
+        return DIV(
+                label(df),
                 DIV(
                     INPUT(_type='hidden', value=value, _name=name, requires=df.field.requires),
-                    INPUT(*attr),
-                    A(I(_class='icon-search'), _class='btn btn-mini', _title=T('Search'), _onclick='$("%s").modal();'%self.modal_id),
-                    A(I(_class='icon-play'), _class='btn btn-mini', _title=T('Apply Link'), _onclick=''),
+                    INPUT(**attr),
+                    A(I(_class='icon-search'), _class='btn btn-mini', _title=T('Search')),
+                    A(I(_class='icon-play'), _class='btn btn-mini', _title=T('Open Link'), _onclick=''),
                     A(I(_class='icon-plus'), _class='btn btn-mini', _title=T('Add')),
                     _class="input-append link-control"
                 ),
+                widget_help(df.meta.df_description),
                 DIV(
                     DIV(
                         BUTTON(XML('&times;'), _type='button', _class='close', **{'_data-dismiss': 'modal', '_aria-hidden': 'true'}),
-                        H3(str(T('Select')) + ' ' + self.document.doc_title),
+                        H3(str(T('Select')) + ' ' + df.parent.doc_title or ''),
                         _class='modal-header'
                     ),
                     DIV(
                         DIV(_class='link-filter'),
-                        DIV(_class='link-results')
+                        DIV(_class='link-results'),
+                        _class='modal-body'
                     ),
-                    _id=self.modal_id
+                    _id=self.modal_id,
+                    _class="link-modal modal hide fade",
+                    **{'_data-backdrop': 'false'}
                 ),
                 SCRIPT(
-                    '''jQuery("#%s").appendTo('.dialogs');'''%(self.modal_id)
-                )
+                    '''jQuery(document).ready(function(){
+                        jQuery('#%(modal_id)s').appendTo('.dialogs');
+                        jQuery('#%(modal_id)s').on('hide', function(){
+                            $('#%(modal_id)s .modal-body .link-filter').html('');
+                        });
+                        jQuery('#%(modal_id)s').on('show', function(){
+                            jQuery.get('%(url_form)s', function(data){
+                                jQuery('#%(modal_id)s .modal-body .link-filter').html(data);
+                                function add(e){
+                                    if (!valid(e)) return;
+                                    parent = jQuery(e)
+                                    row = parent.clone(true);
+                                    row.removeClass('first').insertBefore(parent.parent().find('.actions'));
+                                    reorder(parent.parent());
+                                    row.find(':text').val('').focus();
+                                }
+                                function reorder(e){
+                                    $(e).find('.link-condition').each(function(i,v){
+                                       $(v).find('select, input').each(function(x,y){
+                                           $(y).attr(name, $(y).attr('class') + '_' + i);
+                                       }); 
+                                    });
+                                }
+                                function del(e){
+                                    $(e).remove();
+                                }
+                                function valid(e){
+                                    parent = $(e);
+                                    if (!parent.find(':text').val()) {
+                                        if (!parent.is('.error')){
+                                            parent.addClass('error');
+                                        }
+                                        return false;
+                                    };
+                                    if (parent.is('.error')) parent.removeClass('error');
+                                    return true;
+                                }
+                                jQuery.fn.grow_div = function(){
+                                    return this.each(function(i,v){
+                                        jQuery(v).find(':text').after('<a class="btn btn-mini add" href="javascript:void(0)"><i class="icon-plus"></i></a>').next().click(function(){add(v);}).after('<a class="btn btn-mini remove" href="javascript:void(0)"><i class="icon-remove"></i></a>').next().click(function(){del(div);});
+                                    })
+                                }
+                                jQuery('.link-condition').first().addClass('first');
+                                jQuery('#%(form_id)s .link-condition').grow_div();
+                                jQuery('#%(form_id)s').submit(function(e){
+                                    e.preventDefault();
+                                    jQuery('#%(form_id)s').find('.link-condition').each(function(i,v){
+                                        valid(v);
+                                        if ($(v).is(':not(.first)')){
+                                            $(v).find('.remove').click();
+                                        }
+                                    });
+                                    reorder('%(form_id)s');
+                                    jQuery.get('%(url_key)s&' + jQuery('#%(form_id)s').serialize() + '&idx=' +jQuery('#%(form_id)s').find('.link-condition').length , function(data){
+                                        $('#%(modal_id)s .modal-body .link-results').html(data).show().focus();
+                                        $('#%(modal_id)s .modal-body .link-results').find('.results').each(function(i,v){
+                                            $(v).click(function(){
+                                                $('input[name=%(name)s]').val($(v).data('id'));
+                                                $('#%(text_id)s').val($(v).data('label'));
+                                                $('#%(modal_id)s').modal('close');
+                                            });
+                                        });
+                                    });
+                                });
+                            });
+                        });
+                        jQuery('#%(id)s').find('.link-control a:first').click(function(){    
+                            jQuery('#%(modal_id)s').modal('show');
+                        });
+                    });'''%dict(
+                        name=self.doc_field.meta.df_name,
+                        form_id=self.form_id, 
+                        modal_id=self.modal_id,
+                        text_id=self.text_id,
+                        id=self._id,
+                        url_key=self.url_keyword,
+                        url_form=self.url_form,
+                        url_js=self.url_form_js,
+                    ),
+                    _type="text/javascript"
+                ),
+                _class="control-group",
+                _id = self._id
             )
         
 
@@ -494,6 +520,7 @@ widgets = Storage(
     password = Password,
     upload = Filelink,
     suggest = Suggest,
+    link = Link,
     table = Table,
     sectionbreak = SectionBreak,
     columnbreak = ColumnBreak,
@@ -558,7 +585,7 @@ class Document(DIV):
             print widget
             _type = _type = self.document.fields[_names[i]].meta.df_type
             while i < len(_names) and _type not in ('sectionbreak', 'columnbreak'):
-                subwidget = widgets[_type if _type in ('sectionbreak', 'columnbreak') else 'string'].widget(self.document.fields[_names[i]], self.document.data[_names[i]] if self.document.data else '' )
+                subwidget = widgets[_type].widget(self.document.fields[_names[i]], self.document.data[_names[i]] if self.document.data else '' )
                 widget.components.append(subwidget)
                 if (i+1) >= len(_names) or self.document.fields[_names[i+1]].meta.df_type in  ('sectionbreak', 'columnbreak') : 
                     break
@@ -570,7 +597,7 @@ class Document(DIV):
         def _section_break(widget, i):
             _type = self.document.fields[_names[i]].meta.df_type
             while i < len(_names) and _type != 'sectionbreak':
-                subwidget = widgets[_type if _type in ('sectionbreak', 'columnbreak') else 'string'].widget(self.document.fields[_names[i]], self.document.data[_names[i]] if self.document.data else '' )
+                subwidget = widgets[_type].widget(self.document.fields[_names[i]], self.document.data[_names[i]] if self.document.data else '' )
                 if _type == 'columnbreak':
                     subwidget, i = _column_break(subwidget, i+1)
                 widget.components.append(subwidget)
@@ -583,7 +610,7 @@ class Document(DIV):
         
         while i < len(_names):
             _type = self.document.fields[_names[i]].meta.df_type
-            wgt = widgets[_type if _type in ('sectionbreak', 'columnbreak') else 'string'].widget(self.document.fields[_names[i]], self.document.data[_names[i]] if self.document.data else '' )
+            wgt = widgets[_type].widget(self.document.fields[_names[i]], self.document.data[_names[i]] if self.document.data else '' )
             if _type == 'sectionbreak':
                 subwgt, i = _section_break(wgt, i+1)
                 i += 1

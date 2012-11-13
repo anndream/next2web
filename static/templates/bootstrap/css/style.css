@@ -172,7 +172,7 @@ ul.navigation li a {
 }
 
 input.string, input.integer, input.double, input.decimal, textarea.smalltext {
-	width: 280px;
+	width: 290px;
 }
 
 input.time, input.datetime, input.date, input.upload-text {
@@ -203,8 +203,8 @@ input.upload {
 textarea.smalltext {
 	resize: none;
 	overflow-y: auto;
-	width: 95%;
 	height: 80px;
+	margin-left: 5px;
 }
 
 ul.nav.nav-tabs.nav-stacked li a i {
@@ -277,9 +277,14 @@ tfoot {
 	margin-bottom: 0px;
 }
 
-.link-condition select.logical {
+.link-condition select.agg {
 	width: 75px;
 }
+
+.link-condition select, input, a {
+	margin-left: 5px;
+}
+
 .link-condition select.doc_field {
 	width: 150px;
 }
@@ -299,7 +304,7 @@ tfoot {
 	margin-top: 3px;
 }
 
-.link-condition.first select.logical {
+.link-condition.first select.agg {
 	display: none;
 }
 

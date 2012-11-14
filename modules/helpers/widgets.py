@@ -30,8 +30,14 @@ class FormWidget(object):
         return LABEL(df.meta.df_label, _for = df.meta.df_name) if df.meta.df_label else TAG['']()
     
     @classmethod
-    def control(cls, **attrs):
+    def control(cls, df, value, **attrs):
         raise NotImplementedError
+    
+    @classmethod
+    def readonly(cls, df, value, **attrs):
+        if 'value' in attrs:
+            value = attrs.pop('value')
+        return SPAN(value, **attrs)
     
     @classmethod
     def _attributes(cls, doc_field, widget_attributes, **attributes):
@@ -52,7 +58,7 @@ class FormWidget(object):
         #    attrs['_data-type'] = data
         
         _id = '%s__%s'%(df.meta.df_name, cls._row_id_sufix) 
-        return DIV(cls.label(df), cls.control(df, value, **attrs), widget_help(df.meta.df_description), _id=_id,  _class='control-group'
+        return DIV(cls.label(df), (cls.control if df.writable() else cls.readonly)(df, value, **attrs), widget_help(df.meta.df_description), _id=_id,  _class='control-group'
         )
         
         
@@ -192,12 +198,12 @@ class Link(object):
     LIST_AGGREGATIONS = [('and', T('And')),
                          (('or'), T('Or'))
                         ]
-    LIST_CONDITIONS = [('=', T('Equals'), lambda field, value: field == value),
-                       ('>', T('Greater than'), lambda field, value: field > value),
-                       ('<', T('Less than'), lambda field, value: field < value),
-                       ('!=', T('Not Equals'), lambda field, value: field != value),
-                       ('>=', T('Greater or equals'), lambda field, value: field >= value),
-                       ('<=', T('Less or equals'), lambda field, value: field <= value),
+    LIST_CONDITIONS = [('eq', T('Equals'), lambda field, value: field == value),
+                       ('gt', T('Greater than'), lambda field, value: field > value),
+                       ('lt', T('Less than'), lambda field, value: field < value),
+                       ('ne', T('Not Equals'), lambda field, value: field != value),
+                       ('ge', T('Greater or equals'), lambda field, value: field >= value),
+                       ('gt', T('Less or equals'), lambda field, value: field <= value),
                        ('contains', T('Contains'), lambda field, value: field.like('%'+value+'%')),
                        ('start_with', T('Start with'), lambda field, value: field.like(value + '%')),
                        ('ends_with', T('Ends with'), lambda field, value: field.like('%'+value))
@@ -218,9 +224,9 @@ class Link(object):
         self.request = current.request
         
         if hasattr(self.request, 'application'):
-            self.url_form = URL(args=self.request.args, vars={'__meta_form': self._id})
-            self.url_form_js = URL(r=self.request, c=self.request.controller, f=self.request.function + '.js', vars={'__meta_form': self._id})
-            self.url_keyword = URL(args=self.request.args, vars={'__meta_keywords': self._id})
+            self.url_form = URL(args=self.request.args, vars={'__meta_form': self.doc_field.meta.df_name})
+            self.url_form_js = URL(r=self.request, c=self.request.controller, f=self.request.function + '.js', vars={'__meta_form': self.doc_field.meta.df_name})
+            self.url_keyword = URL(args=self.request.args, vars={'__meta_keywords': self.doc_field.meta.df_name})
             self.callback()
         else:
             self.url_form = self.request
@@ -239,8 +245,10 @@ class Link(object):
         i = int(self.request.vars.pop('idx', 1))
         operators = dict([(x[0], x[2]) for x in self.LIST_CONDITIONS])
         for x in range(i):
-            sfx = '_%'%x
-            field = self.document.fields[self.request.vars[self.DOC_FIELD+sfx]].field
+            sfx = '_%d'%x
+            field = self.doc_field.document.fields[self.request.vars[self.DOC_FIELD+sfx]]._field
+            field.db = self.db
+            field.tablename = self.table
             op = self.request.vars[self.CONDITION+sfx]
             val = self.request.vars[self.KEYWORD+sfx]
             atom = operators[op](field, val)
@@ -257,7 +265,7 @@ class Link(object):
     def callback(self):
         from gluon.http import HTTP
         print self.request.extension
-        if '__meta_form' in self.request.vars and self.request.vars['__meta_form']==self._id:
+        if '__meta_form' in self.request.vars and self.request.vars['__meta_form']==self.doc_field.meta.df_name:
             
             doc_fields = []
             
@@ -267,8 +275,8 @@ class Link(object):
                 DIV(
                     SELECT(*[OPTION(y,_value=x) for x,y in self.LIST_AGGREGATIONS], _class=self.AGGREGATION, _name=self.AGGREGATION+'_0'),
                     SELECT(*[OPTION(y,_value=x) for x,y in doc_fields], _class=self.DOC_FIELD, _name=self.DOC_FIELD+'_0'),
-                    SELECT(*[OPTION(x[1],_value=x[2]) for x in self.LIST_CONDITIONS], _class=self.CONDITION, _name=self.CONDITION+'_0'),
-                    INPUT(_name=self.KEYWORD, _type='text', _class=self.KEYWORD+'_0'),
+                    SELECT(*[OPTION(x[1],_value=x[0]) for x in self.LIST_CONDITIONS], _class=self.CONDITION, _name=self.CONDITION+'_0'),
+                    INPUT(_name=self.KEYWORD+'_0', _type='text', _class=self.KEYWORD),
                     _class='link-condition first control-group'
                 ),
                 DIV(BUTTON(I(_class='icon-search'), ' ' +str( T('Filter')), _type="submit", _class="btn"), _class="actions"),
@@ -277,8 +285,7 @@ class Link(object):
             )
             raise HTTP(200, form.xml())
         
-        elif '__meta__keywords' in self.request.vars:
-            del self.request.vars['__meta_keywords']
+        elif '__meta_keywords' in self.request.vars and self.request.vars['__meta_keywords']==self.doc_field.meta.df_name:
             query = self.build_query()
             rows = self.db.executesql('SELECT * FROM %s WHERE %s'%(self.table, str(query)), as_dict=True)
             if rows:
@@ -308,7 +315,7 @@ class Link(object):
         attr['_class'] = 'link-text',
         attr['_class'] = ''
         
-        name = attr['_name']
+        name = attr.pop('_name')
         value = attr['value']
         
         record = self.db(self.db[self.table].id==value).select(self.db[self.table].ALL).first()
@@ -345,7 +352,7 @@ class Link(object):
                     '''jQuery(document).ready(function(){
                         jQuery('#%(modal_id)s').appendTo('.dialogs');
                         jQuery('#%(modal_id)s').on('hide', function(){
-                            $('#%(modal_id)s .modal-body .link-filter').html('');
+                            $('#%(modal_id)s .modal-body .link-filter, #%(modal_id)s .modal-body .link-filter').html('');
                         });
                         jQuery('#%(modal_id)s').on('show', function(){
                             jQuery.get('%(url_form)s', function(data){
@@ -366,7 +373,9 @@ class Link(object):
                                     });
                                 }
                                 function del(e){
+                                    parent = e.parent();
                                     $(e).remove();
+                                    reorder(parent);
                                 }
                                 function valid(e){
                                     parent = $(e);
@@ -381,7 +390,7 @@ class Link(object):
                                 }
                                 jQuery.fn.grow_div = function(){
                                     return this.each(function(i,v){
-                                        jQuery(v).find(':text').after('<a class="btn btn-mini add" href="javascript:void(0)"><i class="icon-plus"></i></a>').next().click(function(){add(v);}).after('<a class="btn btn-mini remove" href="javascript:void(0)"><i class="icon-remove"></i></a>').next().click(function(){del(div);});
+                                        jQuery(v).find(':text').after('<a class="btn btn-mini add" href="javascript:void(0)"><i class="icon-plus"></i></a>').next().click(function(){add(v);}).after('<a class="btn btn-mini remove" href="javascript:void(0)"><i class="icon-remove"></i></a>').next().click(function(){del(v);});
                                     })
                                 }
                                 jQuery('.link-condition').first().addClass('first');
@@ -397,11 +406,11 @@ class Link(object):
                                     reorder('%(form_id)s');
                                     jQuery.get('%(url_key)s&' + jQuery('#%(form_id)s').serialize() + '&idx=' +jQuery('#%(form_id)s').find('.link-condition').length , function(data){
                                         $('#%(modal_id)s .modal-body .link-results').html(data).show().focus();
-                                        $('#%(modal_id)s .modal-body .link-results').find('.results').each(function(i,v){
+                                        $('#%(modal_id)s .modal-body .link-results').find('.result-line').each(function(i,v){
                                             $(v).click(function(){
-                                                $('input[name=%(name)s]').val($(v).data('id'));
-                                                $('#%(text_id)s').val($(v).data('label'));
-                                                $('#%(modal_id)s').modal('close');
+                                                $('input[name=%(name)s]').val($('a', v).data('id'));
+                                                $('#%(text_id)s').val($('a', v).data('label'));
+                                                $('#%(modal_id)s').modal('hide');
                                             });
                                         });
                                     });
@@ -577,7 +586,7 @@ class Document(DIV):
             return SPAN( A(I(_class='icon-exclamation-sign'), **attrs), _class='help-block')
         
     def formstyle_document(self):        
-        _names = self.document._ordered_fields
+        _names = [doc_field for doc_field in self.document._ordered_fields if self.document.fields[doc_field].visible()]
         i = 0
         element = TAG['']()
         

@@ -200,6 +200,7 @@ class Document(Base):
         
         field = DocumentField(context=self.context)
         field.parent = self.meta
+        field.document = self
         field.load_doc_field(row.id)
         
         if in_field_list:    
@@ -691,9 +692,16 @@ class DocumentField(Base):
             self._vfield.requires = self.define_field_validations()
         return self._vfield
     
-    def is_readable(self):
+    def readable(self):
         from helpers.document import policy_readable
         return policy_readable in self.meta.df_policy
+    
+    def writable(self):
+        from helpers.document import policy_writable
+        return policy_writable in self.meta.df_policy
+    
+    def visible(self):
+        return self.readable() or self.writable()
     
     def has_field_options(self):
         if not self.meta:

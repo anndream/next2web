@@ -1,4 +1,4 @@
-timestamp: 2012-11-12T15:31:14.051000
+timestamp: 2012-11-14T16:44:43.124000
 CREATE TABLE tabDocument(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     doc_name CHAR(512) NOT NULL UNIQUE,
@@ -6,9 +6,7 @@ CREATE TABLE tabDocument(
     doc_description TEXT,
     doc_parent INTEGER REFERENCES tabDocument (id) ON DELETE CASCADE,
     doc_tablename CHAR(512) NOT NULL,
-    doc_propertiesmeta TEXT,
-    doc_data_hash CHAR(32),
-    doc_definition_hash CHAR(32),
+    doc_meta TEXT,
     is_active CHAR(1),
     created_on TIMESTAMP,
     created_by INTEGER REFERENCES auth_user (id) ON DELETE CASCADE,
@@ -16,21 +14,17 @@ CREATE TABLE tabDocument(
     modified_by INTEGER REFERENCES auth_user (id) ON DELETE CASCADE
 );
 success!
-timestamp: 2012-11-12T15:31:14.158000
+timestamp: 2012-11-14T16:44:43.290000
 CREATE TABLE tabDocumentField(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     document INTEGER REFERENCES tabDocument (id) ON DELETE CASCADE,
     idx INTEGER NOT NULL DEFAULT 1,
     df_name CHAR(512) NOT NULL,
     df_type CHAR(512) NOT NULL,
-    df_length INTEGER,
-    df_default CHAR(512),
-    df_policy CHAR(512),
     df_label CHAR(512),
     df_description TEXT,
-    df_represent CHAR(512),
-    df_typemeta TEXT,
-    df_validatorsmeta TEXT,
+    df_default TEXT,
+    df_meta TEXT,
     is_active CHAR(1),
     created_on TIMESTAMP,
     created_by INTEGER REFERENCES auth_user (id) ON DELETE CASCADE,
@@ -38,7 +32,7 @@ CREATE TABLE tabDocumentField(
     modified_by INTEGER REFERENCES auth_user (id) ON DELETE CASCADE
 );
 success!
-timestamp: 2012-11-12T15:31:14.223000
+timestamp: 2012-11-14T16:44:43.441000
 CREATE TABLE tabTags(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     tag_name CHAR(512) NOT NULL,
@@ -49,7 +43,7 @@ CREATE TABLE tabTags(
     modified_by INTEGER REFERENCES auth_user (id) ON DELETE CASCADE
 );
 success!
-timestamp: 2012-11-12T15:31:14.281000
+timestamp: 2012-11-14T16:44:43.499000
 CREATE TABLE tabDocumentTag(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     document INTEGER REFERENCES tabTags (id) ON DELETE CASCADE,
@@ -62,7 +56,7 @@ CREATE TABLE tabDocumentTag(
     modified_by INTEGER REFERENCES auth_user (id) ON DELETE CASCADE
 );
 success!
-timestamp: 2012-11-12T15:31:14.380000
+timestamp: 2012-11-14T16:44:43.567000
 CREATE TABLE tabDocumentComment(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     document INTEGER REFERENCES tabDocument (id) ON DELETE CASCADE,
@@ -75,7 +69,7 @@ CREATE TABLE tabDocumentComment(
     modified_by INTEGER REFERENCES auth_user (id) ON DELETE CASCADE
 );
 success!
-timestamp: 2012-11-12T15:31:14.493000
+timestamp: 2012-11-14T16:44:43.676000
 CREATE TABLE auth_user(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     first_name CHAR(128),
@@ -93,21 +87,21 @@ CREATE TABLE auth_user(
     birthdate DATE
 );
 success!
-timestamp: 2012-11-12T15:31:14.558000
+timestamp: 2012-11-14T16:44:43.756000
 CREATE TABLE auth_group(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     role CHAR(512),
     description TEXT
 );
 success!
-timestamp: 2012-11-12T15:31:14.617000
+timestamp: 2012-11-14T16:44:43.910000
 CREATE TABLE auth_membership(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER REFERENCES auth_user (id) ON DELETE CASCADE,
     group_id INTEGER REFERENCES auth_group (id) ON DELETE CASCADE
 );
 success!
-timestamp: 2012-11-12T15:31:14.677000
+timestamp: 2012-11-14T16:44:44.083000
 CREATE TABLE auth_permission(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     group_id INTEGER REFERENCES auth_group (id) ON DELETE CASCADE,
@@ -116,7 +110,7 @@ CREATE TABLE auth_permission(
     record_id INTEGER
 );
 success!
-timestamp: 2012-11-12T15:31:14.776000
+timestamp: 2012-11-14T16:44:44.164000
 CREATE TABLE auth_event(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     time_stamp TIMESTAMP,
@@ -126,7 +120,7 @@ CREATE TABLE auth_event(
     description TEXT
 );
 success!
-timestamp: 2012-11-12T15:31:14.965000
+timestamp: 2012-11-14T16:44:44.213000
 CREATE TABLE auth_cas(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER REFERENCES auth_user (id) ON DELETE CASCADE,

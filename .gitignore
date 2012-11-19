@@ -27,7 +27,11 @@ pip-log.txt
 .mr.developer.cfg
 .project
 .pydevproject
+
 .settings
+.settings/*
+.settings/**
+.settings**/*
 
 #Web2py Tickets
 errors

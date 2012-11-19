@@ -5,13 +5,13 @@ Created on 17/10/2012
 
 @author: INFRA-PC1
 '''
-from components.config import Document
+from handlers.document import Document
 from gluon.tools import Service
 
 service = Service()
 
 def index():
-    doc = Document('create')
+    doc = Document('add')
     return doc.render('document/index')
 
 @service.json

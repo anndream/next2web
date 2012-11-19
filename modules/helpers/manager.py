@@ -207,6 +207,3 @@ class ValidatorList(object):
     
     def __iter__(self):
         return iter(self.objects)
-    
-class DocFieldList(Manager):
-        pass

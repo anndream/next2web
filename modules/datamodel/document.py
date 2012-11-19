@@ -22,17 +22,9 @@ class Document(BaseModel):
             Field('doc_description', 'text'),
             Field('doc_parent', 'reference tabDocument'),
             Field('doc_tablename', 'string', notnull=True),
-            Field('doc_propertiesmeta', 'text', filter_in = filter_in, filter_out = filter_out),
-            Field('doc_data_hash', 'string', length=32),
-            Field('doc_definition_hash', 'string', length=32),
+            Field('doc_meta', 'text', filter_in = filter_in, filter_out = filter_out),
         ]
-        
-    def set_visibility(self):
-        self.entity.doc_name.writable = False
-        self.entity.doc_propertiesmeta.readable = False
-        self.entity.doc_data_hash.writable = False
-        self.entity.doc_definition_hash.writable = False
-        
+            
 class DocumentField(BaseModel):
     tablename = 'tabDocumentField'
     def set_properties(self):
@@ -46,39 +38,24 @@ class DocumentField(BaseModel):
             Field('idx', 'integer', notnull=True, default=1),
             Field('df_name', 'string', notnull=True),
             Field('df_type', 'string', notnull=True),
-            Field('df_length', 'integer'),
-            Field('df_default', 'string'), 
-            Field('df_policy', 'string', default='rw'),
             Field('df_label', 'string', notnull=False),
             Field('df_description', 'text'),
-            Field('df_represent', 'string'),
-            Field('df_typemeta', 'text', filter_in = filter_in, filter_out = filter_out),
-            Field('df_validatorsmeta', 'text', filter_in = filter_in, filter_out=filter_out),
+            Field('df_default', 'text', filter_in = filter_in, filter_out = filter_out),
+            Field('df_meta', 'text', filter_in = filter_in, filter_out = filter_out)
         ]
     def set_validators(self):
         self.validators = {
             'df_name': IS_NOT_EMPTY(),
             'df_type': IS_IN_SET(types.keys()),
-            'df_policy':IS_IN_SET(policy, zero=None, multiple=True)
         } 
     
-    def s_et_widgets(self):
-        from gluon.sqlhtml import SQLFORM
-        self.widgets = {
-            'df_policy': SQLFORM.widgets.checkbox.widget
-        } 
-        
     def _set_comments(self):
         
         self.entity.df_default.comment = XML(
             '<b>n</b>: An value<br/>'\
             '<b>eval:lambda n: int(n)</b>: An lambda or function to be evaluated on insert or update'
         )
-        
-        self.entity.df_policy.comment = XML('<b>r</b>: Readable <br/>'\
-            '<b>w</b>: Writable <br/>'
-        )
-        
+                
         self.entity.df_width.comment = XML(
             '<b><i>n</i>px</b>: Absolute width of Widget in pixels <br/>'\
             '<b><i>n</i>%</b>: Relative width of Widget in percents <br/>'

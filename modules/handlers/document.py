@@ -5,12 +5,13 @@ Created on 02/10/2012
 
 @author: INFRA-PC1
 '''
+import os
 
 from handlers.base import Base
-from gluon.sqlhtml import SQLFORM
 from gluon.storage import Storage, StorageList
-from Magika import MGK
-import os
+from helpers.widgets import Document as FORM
+
+from core import Core
 
 class DocumentNotLoaded(Exception):
     pass
@@ -26,6 +27,33 @@ class UnableToLoadDocumentData(Exception):
     
 class Document(Base):
     def start(self):
+        self.core = Core()
+        self.db = self.core.db()
+        self.auth = self.context.auth = self.core.auth
+        self.session = self.core.session
+
+    def get(self):
+        self.context.document = self.db.get_document(*self.request.args[:2])
+        if len(self.request.args)>1 and not self.session.document[self.request.args[1]]:
+            self.session.document[self.request.args[1]] = Storage()
+             
+    def add(self):
+        self.get()
+        self.context.form = FORM(self.context.document)
+        
+    def edit(self):
+        self.get()
+        self.context.form = FORM(self.context.document)
+
+    def delete(self):
+        self.db.send_to_trash(self.request.args[0], self.request.args[1])
+        
+    def show(self):
+        self.get()
+        self.context.form = FORM(self.context.document, readonly=True)
+        
+class iDocument(Base):
+    def start(self):
         from datamodel.document import Document as DocumentModel
         from datamodel.document import DocumentField as DocumentFieldModel
         from datamodel.document import Tags
@@ -35,7 +63,7 @@ class Document(Base):
         self.DEFINITION_FILE = os.path.join(os.path.dirname(self.__file__), 'definition.json')
         self.DATA_FILE = os.path.join(os.path.dirname(self.__file__), 'data.json')
         
-        self.app = MGK()
+        self.core = Core()
         self._db = self.app.db([DocumentModel, DocumentFieldModel, Tags, DocumentTag, DocumentComment], framework=True)
         self.auth = self.context.auth = self.app.auth
         self.meta = None
@@ -139,7 +167,7 @@ class Document(Base):
             dat_md5 = self._load_default_data()
             self._db(self._db.Document.doc_name==doc_name).select().first().update_record(doc_definition_hash=def_md5, doc_data_hash=dat_md5)
         else:
-            self._check_updates()
+            pass #self._check_updates()
         if doc_name and self.exists(doc_name)>0:
             if not getattr(self, 'doc_name', None):
                 self.doc_name = doc_name
@@ -423,10 +451,10 @@ class Document(Base):
             __name__ = self.meta.doc_name
             tablename = self.meta.doc_tablename
             fields = self.define_fields()
-            visibility = self.define_visibility()
-            validations = self.define_validations()
+            #visibility = self.define_visibility()
+            #validations = self.define_validations()
             labels = self.define_labels()
-            representation = self.define_representation()
+            #representation = self.define_representation()
         return Model
     
     def define_virtual_table(self):
@@ -566,9 +594,13 @@ class DocumentField(Base):
     @parent.setter
     def parent(self, parent):
         self._parent = parent
+        
     @property
     def field(self):
-        return self.define_field()
+        if self.meta.df_type in fields:
+            return fields[self.meta.df_type].field(self)
+        else:
+            fields['string'].field(self)
     
     @field.setter
     def field(self, value):
@@ -596,8 +628,8 @@ class DocumentField(Base):
         return self._db(self._db.DocumentField.document==document).count()>0
     
     def load_doc_field(self, df_id=None, df_name='', document=''):
-        from helpers.manager import ValidatorList, TypeManager
-        assert any([df_id, df_name, document]), u'Unable for load `doc_field` without and `df_id` or `df_name` and `document`'
+        from helpers.properties import PropertyManager
+        #assert any([df_id, df_name, document]), u'Unable for load `doc_field` without and `df_id` or `df_name` and `document`'
         #assert all(map(lambda x: not x, [self.parent, df_id])) and all([df_name, document]), u'Unable for load `doc_field` with an `df_name` and without `doc_name` or `parent`'
 
         if df_id:
@@ -612,8 +644,8 @@ class DocumentField(Base):
             else:
                 raise Exception('Unable to load %s'%(('doc_field `%s`'%df_id) if df_id else 'doc_field %s for document %s'%(`df_name`, `document.doc_name`)))
         
-        self.meta_type = TypeManager(self.meta.df_type, self.meta.df_typemeta)
-        self.meta_validators = ValidatorList(self.meta.df_validatorsmeta)
+        PropertyManager(self, self.meta.df_meta)
+        
         
     def define_field(self):
         if not self.meta:
@@ -702,20 +734,7 @@ class DocumentField(Base):
     
     def visible(self):
         return self.readable() or self.writable()
-    
-    def has_field_options(self):
-        if not self.meta:
-            raise DocumentFieldNotLoaded
-        return self.meta_type.has_options()
-    
-    def get_field_options(self):
-        if self.has_field_options():
-            return self.meta_type.get_options()
         
-    def get_field_option(self, option, default=None):
-        if self.has_field_options():
-            return self.meta_type.get_option(option, default)
-    
     def create(self):
         self.context.form = SQLFORM(self._db.DocumentField).process()
     

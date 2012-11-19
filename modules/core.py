@@ -15,13 +15,14 @@
 ###############################################################################
 
 from gluon.tools import Auth, Crud, Mail
-from gluon.dal import DAL, Field
+from gluon.dal import DAL, Row
+from helpers.field import fields
 from datamodel.user import User
 from gluon.storage import Storage
 from gluon import current
 
 
-class MGK(object):
+class Core(object):
     def __init__(self):
         self.session, self.request, self.response, self.T = \
             current.session, current.request, current.response, current.T
@@ -37,7 +38,7 @@ class MGK(object):
         self.config.db.uri = "sqlite://storage.sqlite"
         self.config.db.migrate = True
         self.config.db.migrate_enabled = True
-        self.config.db.check_reserved = ['all']
+        self.config.db.check_reserved = [] #'all'
         #if not self.config.db.common_fields:
         #    self.config.db.common_fields = []
         #self.config.db.common_fields.append(self.auth.signature)
@@ -55,7 +56,7 @@ class MGK(object):
         if framework:
             self.config.db.check_reserved = []
         if not hasattr(self, "_db"):
-            self._db = DataBase(self.config, datamodels)
+            self._db = LDS(self.config)
         if datamodels:
             self._db.define_datamodels(datamodels)
         return self._db
@@ -83,7 +84,6 @@ class MGK(object):
             self._mail = Mailer(self.config)
         return self._mail
 
-
 class DataBase(DAL):
     """
     Subclass of DAL
@@ -106,11 +106,82 @@ class DataBase(DAL):
         # db.MyEntity.insert(**values)
         # db.MyEntity(value="some")
         for datamodel in datamodels:
+            if hasattr(self, datamodel.__name__):
+                return
             obj = datamodel(self)
             self.__setattr__(datamodel.__name__, obj.entity)
             if obj.__class__.__name__ == "Account":
                 self.__setattr__("auth", obj)
 
+class LDS(DataBase):
+    """
+    Level Document Structure and Datata Access Layer
+    Subclass of DataBase
+    auto configured based in config Storage object
+    auto instantiate datamodels from database
+    """
+    _lazy_tables = {}
+    _tables = {}
+    
+    def __init__(self, config):
+        
+        from datamodel.document import Document, DocumentField, Tags, DocumentTag, DocumentComment
+        
+        self.config = config
+        DataBase.__init__(self, config, [Document, DocumentField, Tags, DocumentTag, DocumentComment])
+    
+    def list_documents(self):
+        return self().select(self.Document.ALL)
+    
+    def load_document(self, document_name):        
+        row = self(self.Document.doc_name == document_name.lower()).select(self.Document.ALL).first()
+        meta = DocumentMeta(self, **row.as_dict())
+        self.define_datamodels([meta.datamodel()])
+        return meta
+
+    def get_document(self, document_name, data_id=None):
+        meta = self.load_document(document_name)
+        row = self[document_name][data_id] if data_id else meta
+         
+        return DocumentData(meta, **row.as_dict())
+        
+
+class DocumentMeta(Row):
+    def __init__(self, db, *args, **kwargs):
+        from helpers.properties import PropertyManager
+        self._db = db
+        Row.__init__(self, *args, **kwargs)
+        
+        PropertyManager(self, self.doc_meta)
+        
+        self.CHILDS = self._db(self._db.Document.doc_parent==self.id)
+        self.DOC_FIELDS = self._db((self._db.DocumentField.document == self.id) & (self._db.DocumentField.df_type.belongs(fields.keys()))).select(self._db.DocumentField.ALL)
+        map(lambda x, parent=self, proper=PropertyManager: (setattr(x, 'PARENT', parent), PropertyManager(x, x.df_meta)), self.DOC_FIELDS)
+        
+    def datamodel(self):
+        from basemodel import BaseModel
+        _fields = [fields[field.df_type].field(field) for field in self.DOC_FIELDS]
+        
+        class Document(BaseModel):
+            __name__ = self.doc_name
+            tablename = self.doc_tablename
+            def set_properties(cls):
+                cls.fields = _fields
+                
+        return Document
+
+class DocumentData(Row):
+    def __init__(self, meta, *args, **kwargs):
+        self.META = meta
+        Row.__init__(self, *args, **kwargs)
+        self.COMMENTS = self.META._db((self.META._db.DocumentComment.document==self.META.id)&(self.META._db.DocumentComment.data_id==self.id))
+        self.TAGS = self.META._db((self.META._db.DocumentTag.document==self.META.id)&(self.META._db.DocumentTag.data_id==self.id))
+    
+    def send_to_trash(self):
+        self.update_record(is_active=False)
+    
+    def recover_from_trash(self):
+        self.update_record(is_active=True)
 
 class Account(Auth):
     """Auto configured Auth"""

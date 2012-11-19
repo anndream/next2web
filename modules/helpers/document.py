@@ -8,7 +8,7 @@ Created on 17/10/2012
 
 from gluon.dal import Field
 from gluon.storage import Storage
-from gluon import current
+from gluon import current, validators
 from gluon.contrib.simplejson import loads
 
 T = current.T
@@ -44,18 +44,51 @@ types = Storage({
         'native': 'string',
         '_class': 'string',
         'label': T('Data'),
+        'options': [
+            Field('minsize', 'integer', notnull=True, default=None, label=T('Min Size')),
+            Field('maxsize', 'integer', notnull=True, default=None, label=T('Max Size'))
+        ]
+    }),
+    'email': Storage({
+        'native': 'string',
+        '_class': 'email',
+        'label': T('Email'),
+        'options': [
+            Field('validate', 'boolean', default=True, label=T('Validate?'))
+        ]
+    }),
+    'url': Storage({
+        'native': 'string',
+        '_class': 'url',
+        'label': T('Url'),
+        'options': [
+            Field('validate', 'boolean', default=True, label=T('Validate?'))
+        ]
+    }),
+    'phone': Storage({
+        'native': 'string',
+        '_class': 'phone',
+        'label': T('Phone'),
+        'options': [
+            Field('mask', 'boolean', default=True, label=T('Mask')),
+        ]
     }),
     'text': Storage({
         'native': 'text',
         '_class': 'text',
         'label':  T('Text'),
+        'options': [
+            Field('minsize', 'integer', notnull=True, default=None, label=T('Min Size')),
+            Field('maxsize', 'integer', notnull=True, default=None, label=T('Max Size'))
+        ]
     }),
     'smalltext': Storage({
         'native': 'string',
         '_class': 'smalltext',
         'label': T('Small Text'),
         'options': [
-            Field('lenght', 'integer', notnull=True, default=100, label=T('Lenght'))
+            Field('minsize', 'integer', notnull=True, default=None, label=T('Min Size')),
+            Field('maxsize', 'integer', notnull=True, default=None, label=T('Max Size'))
         ],
     }),
     'texteditor': Storage({
@@ -67,6 +100,11 @@ types = Storage({
         'native': 'text',
         '_class': 'rule',
         'label': T('Rule'),
+    }),
+    'property': Storage({
+        'native': 'text',
+        '_class': 'property',
+        'label': T('Property')
     }),
     'boolean': Storage({
         'native': 'boolean',
@@ -82,19 +120,31 @@ types = Storage({
         'native': 'integer',
         '_class': 'integer',
         'label': T('Number'),
+        'options': [
+            Field('minimun', 'integer', default=None, label=T('Minimun')),
+            Field('maximun', 'integer', default=None, label=T('Maximun'))
+        ]
     }),
     'double': Storage({
         'native': 'double',
         '_class': 'double',
         'label': T('Double Number'),
+        'options': [
+            Field('minimun', 'integer', default=None, label=T('Minimun')),
+            Field('maximun', 'integer', default=None, label=T('Maximun')),
+            Field('dot', 'string', default='.', label=T('Dot'))
+        ]
     }),
     'decimal': Storage({
         'native': 'decimal',
         '_class': 'decimal',
         'label': T('Decimal'),
         'options': [
-            Field('n', 'integer', default=None, label='Digits'),
-            Field('m', 'integer', default=None, label='Decimal Places')
+            Field('n', 'integer', default=None, label=T('Digits')),
+            Field('m', 'integer', default=None, label=T('Decimal Places')),
+            Field('minimun', 'integer', default=None, label=T('Minimun')),
+            Field('maximun', 'integer', default=None, label=T('Maximun')),
+            Field('dot', 'string', default='.', label=T('Dot'))
         ],
     }),
     'currency': Storage({
@@ -102,12 +152,14 @@ types = Storage({
         '_class': 'currency',
         'label': T('Money'),
         'options': [
-            Field('symbol', 'string', default='$', label='Symbol'),
-            Field('international', 'string', default='USD', label='International'),
-            Field('decimal_digits', 'integer', default=2, label='Decimal Digits'),
-            Field('decimal_separator', 'string', default='.', label='Decimal Separator'),
-            Field('thousand_digits', 'integer', default=3, label='Thousand Digits'),
-            Field('thousand_separator', 'string', default=',', label='Thousand Separator'),
+            Field('symbol', 'string', default='$', label=T('Symbol')),
+            Field('international', 'string', default='USD', label=T('International')),
+            Field('decimalDigits', 'integer', default=2, label=T('Decimal Digits')),
+            Field('decimalSeparator', 'string', default='.', label=T('Decimal Separator')),
+            Field('thousandDigits', 'integer', default=3, label=T('Thousand Digits')),
+            Field('thousandSeparator', 'string', default=',', label=T('Thousand Separator')),
+            Field('minimun', 'integer', default=None, label=T('Minimun')),
+            Field('maximun', 'integer', default=None, label=T('Maximun')),
         ],
     }),
     'date': Storage({
@@ -115,7 +167,9 @@ types = Storage({
         '_class': 'date',
         'label': T('Date'),
         'options': [
-            Field('strftime', 'string', default='%Y-%m-%d', label='Format'),
+            Field('format', 'string', default='%Y-%m-%d', requires=validators.IS_NOT_EMPTY(), label=T('Format')),
+            Field('minimun', 'string', default='1900-01-01', label=T('Minimun')),
+            Field('maximun', 'string', default=None, label=T('Maximun'))
         ],
     }),
     'time': Storage({
@@ -123,7 +177,9 @@ types = Storage({
         '_class': 'time',
         'label': T('Time'),
         'options': [
-            Field('strftime', 'string', default='%H-%M-%S', label='Format'),
+            Field('format', 'string', default='%H-%M-%S', requires=validators.IS_NOT_EMPTY(), label='Format'),
+            Field('minimun', 'string', default='1900-01-01', label=T('Minimun')),
+            Field('maximun', 'string', default=None, label=T('Maximun'))
         ],
     }),
     'datetime': Storage({
@@ -131,23 +187,25 @@ types = Storage({
         '_class': 'datetime',
         'label': T('Date/Time'),
         'options': [
-            Field('strftime', 'string', default='%Y-%m-%d %H-%M-%S', label='Format'),
+            Field('format', 'string', default='%Y-%m-%d %H-%M-%S', requires=validators.IS_NOT_EMPTY(), label='Format'),
+            Field('minimun', 'string', default='1900-01-01', label=T('Minimun')),
+            Field('maximun', 'string', default=None, label=T('Maximun'))
         ],
     }),
     'password': Storage({
         'native': 'password',
         '_class': 'password',
         'label': T('Password'),
+        'options': [
+            Field('enforce_safety', 'boolean', default=False, label=T("Enforce Safety"))
+        ]
     }),
     'filelink': Storage({
         'native': 'upload',
         '_class': 'filelink',
         'label': T('Upload'),
         'options': [
-            Field('uploadfield', 'string', default=None, label='Field'),
-            Field('uploadfolder', 'upload', default=None, label='Folder'),
-            Field('uploadseparated', 'boolean', default=None, label='Separated?'),
-            Field('uploadfs', 'string', default=None, label='Diferenced File System?'),
+            Field('multiple', 'boolean', default=False, label=T('Allow Multiple Files?'))
         ],
     }),
     'link': Storage({
@@ -217,6 +275,8 @@ vtypes = Storage({
     }),
 })
 
+#TODO 1: Implementar uma rotina de atualização para cada registro.
+
 def _loader(db, table, data, document=None):
     if isinstance(data, list):
         for row in data:
@@ -240,4 +300,3 @@ def load_definition(db, filename):
    
 def load_data(db, filename):
     pass
-        

@@ -29,6 +29,8 @@ class Base(object):
         self.response = current.response
         self.request = current.request
         self.session = current.session
+        if not self.session['document']:
+            self.session.document = Storage()
         self.T = current.T
 
         # hooks call

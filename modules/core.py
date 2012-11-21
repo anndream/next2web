@@ -18,9 +18,25 @@ from gluon.tools import Auth, Crud, Mail
 from gluon.dal import DAL, Row
 from helpers.field import fields
 from datamodel.user import User
-from gluon.storage import Storage
+from gluon.storage import Storage, StorageList
 from gluon import current
 
+
+adapters = Storage()
+
+class AdapterNotFound(Exception):
+    pass
+
+def register_adapter(doc_name, adapter):
+    if not doc_name in adapters.keys():
+        adapters[doc_name] = adapter
+        
+def get_adapter(doc_name, default=None):
+    if doc_name in adapters:
+        return adapters[doc_name]
+    elif default:
+        return default
+    raise AdapterNotFound(doc_name)
 
 class Core(object):
     def __init__(self):
@@ -130,22 +146,48 @@ class LDS(DataBase):
         self.config = config
         DataBase.__init__(self, config, [Document, DocumentField, Tags, DocumentTag, DocumentComment])
     
+    def _check_update(self, doc_name, definition):
+        from helpers import md5sum
+        from helpers.document import load_definition, definition_lookup
+        
+        path = definition_lookup(definition)
+        
+        md5 = md5sum(path)
+        if not self.has_document(doc_name):
+            load_definition(self, path)
+            row = self.load_document(doc_name)
+            row.update_property('info', 'definition_hash', md5)
+        else:
+            row = self.load_document(doc_name)
+            if md5!=row.property('info', 'definition_hash'):
+                load_definition(self, path)
+                row.update_property('info', 'definition_hash', md5)
+    
+    def has_document(self, document_name):
+        return self(self.Document.doc_name == document_name.lower()).count()>0
+    
     def list_documents(self):
         return self().select(self.Document.ALL)
     
     def load_document(self, document_name):        
-        row = self(self.Document.doc_name == document_name.lower()).select(self.Document.ALL).first()
+        row = self(self.Document.doc_name == document_name.lower()).select(self.Document.ALL).first() or Row({'id':None})
         meta = DocumentMeta(self, **row.as_dict())
+        if hasattr(row, 'update_record'):
+            setattr(meta, 'update_record', getattr(row, 'update_record'))
         self.define_datamodels([meta.datamodel()])
         return meta
 
     def get_document(self, document_name, data_id=None):
         meta = self.load_document(document_name)
-        row = self[document_name][data_id] if data_id else meta
-         
-        return DocumentData(meta, **row.as_dict())
+        row = self[document_name][data_id] if data_id else Row({'id':None})
         
-
+        adapter = get_adapter(document_name, DocumentData)
+        
+        document = adapter(meta, **row.as_dict())
+        if hasattr(row, 'update_record'):
+            setattr(document, 'update_record', getattr(row, 'update_record'))
+        return document
+        
 class DocumentMeta(Row):
     def __init__(self, db, *args, **kwargs):
         from helpers.properties import PropertyManager
@@ -155,12 +197,13 @@ class DocumentMeta(Row):
         PropertyManager(self, self.doc_meta)
         
         self.CHILDS = self._db(self._db.Document.doc_parent==self.id)
-        self.DOC_FIELDS = self._db((self._db.DocumentField.document == self.id) & (self._db.DocumentField.df_type.belongs(fields.keys()))).select(self._db.DocumentField.ALL)
+        self.DOC_FIELDS = self._db((self._db.DocumentField.document == self.id)&(self._db.DocumentField.df_type!='property')).select(self._db.DocumentField.ALL) #& (self._db.DocumentField.df_type.belongs(fields.keys()))
+        
         map(lambda x, parent=self, proper=PropertyManager: (setattr(x, 'PARENT', parent), PropertyManager(x, x.df_meta)), self.DOC_FIELDS)
         
     def datamodel(self):
         from basemodel import BaseModel
-        _fields = [fields[field.df_type].field(field) for field in self.DOC_FIELDS]
+        _fields = [fields[field.df_type].field(field) for field in self.DOC_FIELDS if field.df_type in fields.keys()]
         
         class Document(BaseModel):
             __name__ = self.doc_name
@@ -174,11 +217,22 @@ class DocumentData(Row):
     def __init__(self, meta, *args, **kwargs):
         self.META = meta
         Row.__init__(self, *args, **kwargs)
+
         self.COMMENTS = self.META._db((self.META._db.DocumentComment.document==self.META.id)&(self.META._db.DocumentComment.data_id==self.id))
-        self.TAGS = self.META._db((self.META._db.DocumentTag.document==self.META.id)&(self.META._db.DocumentTag.data_id==self.id))
+        self.TAGS = self.META._db((self.META._db.DocumentTag.document==self.META.id)&(self.META._db.DocumentTag.data_id==self.id))        
+    
+    def save(self):
+        if not hasattr(self, 'id'):
+            id = self.META._db[self.META.df_tablename].validate_and_insert(**self.__dict__)
+            self.id = id
+        else:
+            self.update_record(**self.__dict__)
+        return self
     
     def send_to_trash(self):
         self.update_record(is_active=False)
+        
+    delete_record = send_to_trash
     
     def recover_from_trash(self):
         self.update_record(is_active=True)

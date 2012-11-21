@@ -37,3 +37,21 @@ month_name_full = ['', T('January'), T('February'), T('March'), T('April'), T('M
 now = lambda: datetime.datetime.today()
 today = lambda: datetime.date.today()
 thistime = lambda: datetime.time(time.localtime()[3:7])
+
+def temp_store_file(file_data):
+    from tempfile import NamedTemporaryFile
+    f = NamedTemporaryFile(delete=False)
+    f.write(file_data.read())
+    f.close()
+    return f.name
+
+def temp_get_file(filename):
+    return (filename, open(filename, 'rb'))
+
+def temp_del_file(filename):
+    os.unlink(filename)
+    
+def get_key():
+    from gluon.tools import Auth
+    return Auth.get_or_create_key()
+    

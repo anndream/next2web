@@ -31,6 +31,10 @@ class Document(Base):
         self.db = self.core.db()
         self.auth = self.context.auth = self.core.auth
         self.session = self.core.session
+        try:
+            self.db._check_update('document', 'config')
+        except:
+            pass
 
     def get(self):
         self.context.document = self.db.get_document(*self.request.args[:2])

@@ -6,6 +6,8 @@ Created on 17/10/2012
 @author: INFRA-PC1
 '''
 
+import os
+
 from gluon.dal import Field
 from gluon.storage import Storage
 from gluon import current, validators
@@ -276,6 +278,16 @@ vtypes = Storage({
 })
 
 #TODO 1: Implementar uma rotina de atualização para cada registro.
+
+def definition_lookup(definition, name='definition', sep='.', ext='.json'):
+    base = os.path.join(current.request.folder, 'modules', 'components')
+    paths = definition.split('.')
+    if not isinstance(paths, list):
+        paths = [paths]
+    paths += [name+ext]
+    path = os.path.join(base, *paths) 
+    if os.path.exists(path):
+        return path
 
 def _loader(db, table, data, document=None):
     if isinstance(data, list):

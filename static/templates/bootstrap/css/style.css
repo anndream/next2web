@@ -193,7 +193,7 @@ select.multipleselect {
 }
 
 input.link-text {
-	width: 67%;	
+	width: 210px;	
 }
 
 input.upload {
@@ -286,7 +286,7 @@ tfoot {
 }
 
 .link-condition select.doc_field {
-	width: 150px;
+	width: 143px;
 }
 .link-condition select.condition {
 	width: 100px;
@@ -309,7 +309,7 @@ tfoot {
 }
 
 .link-condition.first select.doc_field {
-	margin-left: 79px;
+	margin-left: 85px;
 }
 
 .link-condition.first a.remove {

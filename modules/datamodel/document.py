@@ -5,6 +5,9 @@ from gluon.dal import Field
 from basemodel import BaseModel
 from gluon.validators import *
 from gluon.html import XML
+from gluon import current
+
+T=current.T
 
 from helpers.document import types, policy
 
@@ -60,7 +63,7 @@ class DocumentField(BaseModel):
             '<b><i>n</i>px</b>: Absolute width of Widget in pixels <br/>'\
             '<b><i>n</i>%</b>: Relative width of Widget in percents <br/>'
         )
-        
+      
 class Tags(BaseModel):
     tablename = 'tabTags'
     def set_properties(self):

@@ -48,12 +48,6 @@ class FormWidget(object):
         return df.property('policy', 'is_readable')
     
     @classmethod
-    def readonly(cls, df, value, **attrs):
-        if 'value' in attrs:
-            value = attrs.pop('value')
-        return SPAN(value, **attrs)
-    
-    @classmethod
     def _attributes(cls, doc_field, widget_attributes, **attributes):
         attr = dict(
             _id = '%s_%s' % (doc_field.PARENT.doc_name, doc_field.df_name),
@@ -63,6 +57,8 @@ class FormWidget(object):
         )
         attr.update(widget_attributes)
         attr.update(attributes)
+        if not cls.writable(doc_field):
+            attr['_disabled']='disabled'
         return attr
     
     @classmethod
@@ -72,7 +68,7 @@ class FormWidget(object):
         #    attrs['_data-type'] = data
         
         _id = '%s__%s'%(df.df_name, cls._row_id_sufix) 
-        return DIV(cls.label(df), (cls.control if cls.writable(df) else cls.readonly)(df, value, **attrs), widget_help(df.df_description), _id=_id,  _class='control-group'
+        return DIV(cls.label(df), cls.control(df, value, **attrs), widget_help(df.df_description), _id=_id,  _class='control-group'
         )
         
         
@@ -142,7 +138,7 @@ class Text(FormWidget):
         #data = df_type.dump()['data']
         #if data:
         #    attrs['_data-type'] = `data`
-        attrs = cls._attributes(df, {'valeu': value}, **attrs)
+        attrs = cls._attributes(df, {'value': value}, **attrs)
         return TEXTAREA(**attrs) 
     
 class Smalltext(Text):
@@ -238,6 +234,7 @@ class Link(object):
         
     def __init__(self, doc_field, value, **attrs):
         self.doc_field = doc_field
+        self.document_referenced = self.doc_field.property('type', 'document')
         
         self._id = '%s_%s'%(self.doc_field.df_name, self._row_id_sufix)
         self.modal_id = 'modal_for_%s' % self.doc_field.df_name
@@ -299,14 +296,14 @@ class Link(object):
         from gluon.http import HTTP
         if '__meta_form' in self.request.vars and self.request.vars['__meta_form']==self.doc_field.df_name:
             
-            doc_fields = []
+            DOC_FIELDS = []
             
-            [doc_fields.append((doc_field.df_name, doc_field.df_label or pretty(doc_field.df_name))) for doc_field in self.db(self.db.DocumentField.document==self.doc_field.document).select()]
+            [DOC_FIELDS.append((doc_field.df_name, doc_field.df_label or pretty(doc_field.df_name))) for doc_field in self.db(self.db.DocumentField.document==self.doc_field.document).select()]
             
             form = FORM(
                 DIV(
                     SELECT(*[OPTION(y,_value=x) for x,y in self.LIST_AGGREGATIONS], _class=self.AGGREGATION, _name=self.AGGREGATION+'_0'),
-                    SELECT(*[OPTION(y,_value=x) for x,y in doc_fields], _class=self.DOC_FIELD, _name=self.DOC_FIELD+'_0'),
+                    SELECT(*[OPTION(y,_value=x) for x,y in DOC_FIELDS], _class=self.DOC_FIELD, _name=self.DOC_FIELD+'_0'),
                     SELECT(*[OPTION(x[1],_value=x[0]) for x in self.LIST_CONDITIONS], _class=self.CONDITION, _name=self.CONDITION+'_0'),
                     INPUT(_name=self.KEYWORD+'_0', _type='text', _class=self.KEYWORD),
                     _class='link-condition first control-group'
@@ -344,13 +341,13 @@ class Link(object):
         
         attr['_id'] = self.text_id
         attr['_autocomplete'] = 'off'
-        attr['_class'] = 'link-text',
-        attr['_class'] = ''
+        attr['_class'] = 'link-text'
         
         name = attr.pop('_name')
         value = attr['value']
         
-        record = self.db(self.db[self.table].id==value).select(self.db[self.table].ALL).first()
+        record = self.db.get_document(self.document_referenced, value) if value else None
+
         if record: 
             attr['value'] = record[self.label]
         
@@ -395,12 +392,13 @@ class Link(object):
                                     row = parent.clone(true);
                                     row.removeClass('first').insertBefore(parent.parent().find('.actions'));
                                     reorder(parent.parent());
+                                    
                                     row.find(':text').val('').focus();
                                 }
                                 function reorder(e){
                                     $(e).find('.link-condition').each(function(i,v){
                                        $(v).find('select, input').each(function(x,y){
-                                           $(y).attr(name, $(y).attr('class') + '_' + i);
+                                           $(y).attr($('y').attr('name'), $(y).attr('class') + '_' + i);
                                        }); 
                                     });
                                 }
@@ -469,6 +467,53 @@ class Link(object):
             )
         
 
+class SingleChild(object):
+    _class = types.link._class
+    
+    def __init__(self, doc_field):
+        self.doc_field = doc_field
+        self.db = self.doc_field.PARENT._db
+        self.table = self.doc_field.PARENT.doc_tablename
+        self.document_referenced = self.doc_field.property('type', 'document')
+        self.label = self.doc_field.property('type', 'label')
+        self.request = current.request
+        
+        self.text_id = 'text_for_'%self.doc_field.df_name
+        
+        if hasattr(self.request, 'application'):
+            self.url_form = URL(args=self.request.args, vars={'__meta_form': self.doc_field.df_name})
+            self.url_storage = URL(r=self.request, c=self.request.controller, f=self.request.function, vars={'__meta_data': self.doc_field.df_name})
+            self.callback()
+        else:
+            self.url_form = self.request
+            self.url_storage = self.request
+    
+    def callback(self):
+        pass
+    
+    def build(self, df, value, **attributes):
+        labelize = lambda label: ' '.join([x.lower().capitalize() for x in str(label).replace(' ', '_').split('_')])
+        label = lambda df: LABEL(labelize(df.df_label or df.df_name), _for=df.df_name)
+        
+        default = {
+            '_type': 'text',
+            'value': (not value is None and str(value)) or ''
+        }
+        
+        _id = '%s_%s' %(df.PARENT.doc_name, df.df_name)
+        
+        attr = String._attributes(df, default, **attributes)
+        attr['_id'] = self.text_id
+        attr['_class'] = 'link-child'
+        name = attr.pop('_name')
+        value = attr['value']
+        
+        record = self.db.get_document(self.document_referenced, value)
+        if record and hasattr(record, self.label):
+            attr['value'] = record[self.label]
+            
+        
+        
 class Property(object):
     _class = types.property._class
     _row_id_sufix = '_row'
@@ -481,7 +526,13 @@ class Property(object):
         self.groups = value.keys()
         self._id = 'properties_for_'
         
-        PropertyManager(self, value)
+        self._proper = PropertyManager(self, value)
+        
+    def _build_group(self, groupname, groupdata):
+        return DIV(
+            
+            _id=groupname,
+        )
         
     def build(self):
         label = lambda f: LABEL(pretty(f.label or f.name), _for=f.name)
@@ -639,49 +690,48 @@ class Document(DIV):
             }
             return SPAN( A(I(_class='icon-exclamation-sign'), **attrs), _class='help-block')
         
+    def _section_break(self, widget, i):
+        _type = self.document.META.DOC_FIELDS[i].df_type
+        while i < len(self.document.META.DOC_FIELDS) and _type != 'sectionbreak':
+            df_name = self.document.META.DOC_FIELDS[i].df_name
+            subwidget = widgets[_type].widget(self.document.META.DOC_FIELDS[i], self.document[df_name] if hasattr(self.document, df_name) else '' )
+            if _type == 'columnbreak':
+                subwidget, i = self._column_break(subwidget, i+1)
+            widget.components.append(subwidget)
+            if (i+1) >= len(self.document.META.DOC_FIELDS) or self.document.META.DOC_FIELDS[i+1].df_type == 'sectionbreak': 
+                break
+            else:
+                i += 1
+                _type = self.document.META.DOC_FIELDS[i].df_type
+        return widget, i
+    
+    def _column_break(self, widget, i):
+        _type = _type = self.document.META.DOC_FIELDS[i].df_type
+        while i < len(self.document.META.DOC_FIELDS) and _type not in ('sectionbreak', 'columnbreak'):
+            df_name = self.document.META.DOC_FIELDS[i].df_name
+            subwidget = widgets[_type].widget(self.document.META.DOC_FIELDS[i], self.document[df_name] if hasattr(self.document, df_name) else '' )
+            widget.components.append(subwidget)
+            if (i+1) >= len(self.document.META.DOC_FIELDS) or self.document.META.DOC_FIELDS[i+1].df_type in  ('sectionbreak', 'columnbreak') : 
+                break
+            else:
+                i += 1
+                _type = self.document.META.DOC_FIELDS[i].df_type
+        return widget, i
+        
     def formstyle_document(self):        
         i = 0
         element = TAG['']()
-        
-        def _column_break(widget, i):
-            _type = _type = self.document.META.DOC_FIELDS[i].df_type
-            df_name = self.document.META.DOC_FIELDS[i].df_name
-            while i < len(self.document.META.DOC_FIELDS) and _type not in ('sectionbreak', 'columnbreak'):
-                subwidget = widgets[_type].widget(self.document.META.DOC_FIELDS[i], self.document[df_name] if self.document.data else '' )
-                widget.components.append(subwidget)
-                if (i+1) >= len(self.document.META.DOC_FIELDS) or self.document.META.DOC_FIELDS[i+1].df_type in  ('sectionbreak', 'columnbreak') : 
-                    break
-                else:
-                    i += 1
-                    _type = self.document.META.DOC_FIELDS[i].df_type
-            return widget, i
-        
-        def _section_break(widget, i):
-            _type = self.document.META.DOC_FIELDS[i].df_type
-            df_name = self.document.META.DOC_FIELDS[i].df_name
-            while i < len(self.document.META.DOC_FIELDS) and _type != 'sectionbreak':
-                subwidget = widgets[_type].widget(self.document.META.DOC_FIELDS[i], self.document[df_name] if self.document.data else '' )
-                if _type == 'columnbreak':
-                    subwidget, i = _column_break(subwidget, i+1)
-                widget.components.append(subwidget)
-                if (i+1) >= len(self.document.META.DOC_FIELDS) or self.document.META.DOC_FIELDS[i+1].df_type == 'sectionbreak': 
-                    break
-                else:
-                    i += 1
-                    _type = self.document.META.DOC_FIELDS[i].df_type
-            return widget, i
-        
         while i < len(self.document.META.DOC_FIELDS):
             _type = self.document.META.DOC_FIELDS[i].df_type
             df_name = self.document.META.DOC_FIELDS[i].df_name
-            wgt = widgets[_type].widget(self.document.META.DOC_FIELDS[i], self.document[df_name] if self.document[df_name] else '' )
+            wgt = widgets[_type].widget(self.document.META.DOC_FIELDS[i], self.document[df_name] if hasattr(self.document, df_name) else '' )
             if _type == 'sectionbreak':
-                subwgt, i = _section_break(wgt, i+1)
+                subwgt, i = self._section_break(wgt, i+1)
                 i += 1
                 element.components.append(subwgt)
                 continue
             elif _type == 'columnbrek':
-                subwgt, i = _column_break(wgt, i+1)
+                subwgt, i = self._column_break(wgt, i+1)
                 i += 1
                 element.components.append(subwgt)
                 continue

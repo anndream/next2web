@@ -7,8 +7,8 @@ Created on 21/11/2012
 '''
 
 from gluon.storage import Storage
-from helpers.storage.base import BaseStorage
-from helpers.storage.cookie import CookieStorage
-from helpers.storage.session import SessionStorage
+from base import BaseStorage
+from cookie import CookieStorage
+from session import SessionStorage
 
-storage = Storage({'session': StorageSession, 'cookie': StorageCookie})
+storage = Storage({'session': SessionStorage, 'cookie': CookieStorage})

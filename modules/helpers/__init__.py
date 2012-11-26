@@ -38,6 +38,16 @@ now = lambda: datetime.datetime.today()
 today = lambda: datetime.date.today()
 thistime = lambda: datetime.time(time.localtime()[3:7])
 
+def process_form(document, data):
+    from field import fields
+    vars, files = {}, {}
+    for doc_field in document.META.DOC_FIELDS:
+        if doc_field.df_type in fields and doc_field.df_type!='filelink' and hasattr(data, doc_field.df_name):
+            vars[doc_field.df_name] = data[doc_field.df_name]
+        if doc_field.df_type in fields and doc_field.df_type=='filelink' and hasattr(data, doc_field.df_name):
+            vars[doc_field.df_name] = (data[doc_field.df_name].filename, data[doc_field].file)
+    return (vars, files)
+
 def temp_store_file(file_data):
     from tempfile import NamedTemporaryFile
     f = NamedTemporaryFile(delete=False)

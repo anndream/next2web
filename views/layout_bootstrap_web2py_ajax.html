@@ -1,0 +1,17 @@
+<script type="text/javascript"><!--
+    // These variables are used by the web2py_ajax_init function in web2py_ajax.js (which is loaded below).
+    var w2p_ajax_confirm_message = "{{=T('Are you sure you want to delete this object?')}}";
+    var w2p_ajax_date_format = "{{=T('%Y-%m-%d')}}";
+    var w2p_ajax_datetime_format = "{{=T('%Y-%m-%d %H:%M:%S')}}";
+    //--></script>
+{{
+response.files.insert(0,URL(c='static', f='templates', args=['bootstrap', 'js','jquery-1.8.2.js']))
+response.files.insert(1,URL(c='static', f='templates', args=['bootstrap','css','bootstrap.min.css']))
+response.files.insert(2,URL(c='static', f='templates', args=['bootstrap', 'css', 'custom-theme', 'jquery-ui-1.8.16.custom.css']))
+response.files.insert(3,URL(c='static', f='templates', args=['bootstrap','css','style.css']))
+response.files.insert(4,URL('static','js/web2py.js'))
+response.files.insert(5,URL(c='static', f='templates', args=['bootstrap', 'js', 'jquery-ui-1.9.1.custom.min.js']))
+response.files.insert(6,URL(c='static', f='templates', args=['bootstrap', 'js', 'bootstrap.min.js']))
+response.include_meta()
+response.include_files()
+}}

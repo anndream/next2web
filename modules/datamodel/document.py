@@ -90,15 +90,13 @@ class DocumentComment(BaseModel):
         ]
     
     
-class Files(BaseModel):
+class File(BaseModel):
     tablename = 'tabFiles'
     def set_properties(self):
         self.fields = [
             Field('title', 'string', length=255, notnull=True),
             Field('filename', 'string', length=255, notnull=True),
-            Field('flenght', 'integer', notnull=True),
-            Field('mimetype', 'integer', notnull=True),
-            Field('path', 'string', notnull=True)
+            Field('path', 'upload', notnull=True)
         ]
         
 class DocumentFile(BaseModel):

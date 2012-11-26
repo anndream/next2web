@@ -33,20 +33,14 @@ pip-log.txt
 .settings/**
 .settings**/*
 
-#Web2py Tickets
-errors
-errors/*
-errors/**
-errors**/*
-
-#Web2py Sessions
-sessions
-sessions/*
-sessions/**
-sessions**/*
-
-#Web2py Storages
-databases
+#Web2py
 databases/*
-databases/**
-databases**/*
+databases\*
+sessions/*
+sessions\*
+errors/*
+errors\*
+cache/*
+cache\*
+private/*
+private\*

@@ -25,10 +25,10 @@ class BaseStorage(object):
         self.init_data()
         
     def _get_current(self):
-        return self.data[self.STEP_KEY]
+        return self.data[self.KEY]
     
     def _set_current(self, step):
-        self.data[self.STEP_KEY] = step
+        self.data[self.KEY] = step
         
     current = property(_get_current, _set_current)
     
@@ -45,6 +45,8 @@ class BaseStorage(object):
     
     def set_data(self, step, cleaned_data):
         self.data[self.KEY][step] = cleaned_data
+        
+    data = property(get_data, set_data)
         
     @property
     def current_data(self):
@@ -67,12 +69,12 @@ class BaseStorage(object):
         if step not in self.data[self.FILE_KEY]:
             self.data[self.FILE_KEY][step] = {}
         
-        for field, field_file in (files or {}).iteritems():
-            tmp_file = temp_store_file(field_file)
+        for field, (filename, data)  in (files or {}).iteritems():
+            tmp_file = temp_store_file(data)
             file_dict = {
                 'tmp_name' : tmp_file,
-                'filename': field_file.filename,
-                'content-type': contenttype(field_file.filename)
+                'filename': filename,
+                'content-type': contenttype(filename)
             }
             self.data[self.KEY][step][field] = file_dict
             

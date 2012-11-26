@@ -9,11 +9,11 @@ Created on 14/11/2012
 from gluon.storage import Storage
 
 class PropertyManager(object):
-    _data = {}
-    _defaults = {}
+    _data = []
+    _defaults = []
     def __init__(self, df, data):
-        self._data = data or {}
-        self._defaults = (df.df_default if hasattr(df, 'df_default') else (df.doc_default if hasattr(df, 'doc_default') else {} )) or {}
+        self._data = data or []
+        self._defaults = (df.df_default if hasattr(df, 'df_default') else (df.doc_default if hasattr(df, 'doc_default') else [] )) or []
         
         self._build_data()
         self._build_default()
@@ -33,19 +33,17 @@ class PropertyManager(object):
     
     def _build_data(self):
         self.data = Storage()
-        for rows in self._data.values():
-            for prop in rows:
-                if not self.data[prop['group']]:
-                    self.data[prop['group']] = Storage() 
-                self.data[prop['group']][prop['property']] = prop['value']
+        for prop in self._data:
+            if not self.data[prop['group']]:
+                self.data[prop['group']] = Storage() 
+            self.data[prop['group']][prop['property']] = prop['value']
     
     def _build_default(self):
         self.default = Storage()
-        for rows in self._defaults.values():
-            for prop in rows:
-                if not self.default[prop['group']]:
-                    self.default[prop['group']] = Storage() 
-                    self.default[prop['group']][prop['property']] = prop.get('default', None)
+        for prop in self._defaults:
+            if not self.default[prop['group']]:
+                self.default[prop['group']] = Storage() 
+                self.default[prop['group']][prop['property']] = prop.get('default', None)
                         
     def _merge(self, lft, rgt):
         new_props = Storage()
@@ -68,8 +66,12 @@ class PropertyManager(object):
         prop_group = self.properties(group)
         prop = prop_group.get(name, value)
         if prop and value:
+            row = filter(lambda row: row['group']==group and row['property']==name, self._data)
             prop_group[name] = value
-            self._data[self.data] = {'group': group, 'name': name, 'value': value or prop}
+            if row:
+                row[0]['value'] = value
+            else:
+                self._data.append({'group': group, 'property': name, 'value': value or prop})
         else:
             return value
         return prop

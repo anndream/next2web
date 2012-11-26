@@ -6,16 +6,16 @@ Created on 25/10/2012
 @author: INFRA-PC1
 '''
 
-from gluon.sqlhtml import StringWidget, TextWidget, \
-OptionsWidget, ListWidget, RadioWidget, CheckboxesWidget, PasswordWidget, \
-UploadWidget, AutocompleteWidget
-
-from gluon.storage import Storage
+from gluon.storage import Storage, StorageList
 from gluon import current, validators
-
 from helpers.document import types, vtypes
-
 from gluon.html import *
+from gluon.http import HTTP
+from helpers import process_form
+from gluon.compileapp import LOAD
+
+
+from helpers.storage import storage
 
 T = current.T
 
@@ -89,7 +89,7 @@ class String(FormWidget):
 class Integer(String):
     _class = types.integer._class
     
-class Double(StringWidget):
+class Double(String):
     _class = types.double._class
     
 class Decimal(String):
@@ -153,7 +153,7 @@ class Rule(Text):
 class Boolean(String):
     _class = types.boolean._class
     
-class Select(OptionsWidget):
+class Select(FormWidget):
     _class = types.select._class
     
     @staticmethod
@@ -163,7 +163,7 @@ class Select(OptionsWidget):
     @classmethod
     def widget(cls, df, value, **attrs):
                 
-        return OptionsWidget.widget(df.field, value, **attrs)
+        return FormWidget(df.field, value, **attrs)
 
 class MultipleSelect(Select):
     
@@ -178,37 +178,37 @@ class Radio(Select):
     @classmethod
     def widget(cls, df, value, **attrs):
         
-        return RadioWidget.widget(df.field, value, **attrs)
+        return FormWidget(df.field, value, **attrs)
     
 class Checkbox(Select):
     @classmethod
     def widget(cls, df, value, **attrs):
-        return CheckboxesWidget.widget(df.field, value, **attrs)
+        return FormWidget.widget(df.field, value, **attrs)
     
-class List(ListWidget):
+class List(FormWidget):
     _class = types.list._class
     
     @classmethod
     def widget(cls, df, value, **attrs):
-        return ListWidget.widget(df.field, value, **attrs)
+        return FormWidget.widget(df.field, value, **attrs)
     
-class Password(PasswordWidget):
+class Password(String):
     _class = types.password._class
     
     @classmethod
     def widget(cls, df, value, **attrs):
-        return PasswordWidget.widget(df.field, value, **attrs)
+        return String.widget(df.field, value, **attrs)
     
-class Filelink(UploadWidget):
+class Filelink(FormWidget):
     _class = types.filelink._class
     
     @classmethod
     def widget(cls, df, value, download_url=None, **attrs):
-        return UploadWidget.widget(df.field, value, download_url, **attrs)
+        return FormWidget.widget(df.field, value, download_url, **attrs)
     
     @classmethod
     def represent(cls, df, value, download_url=None):
-        return UploadWidget.represent(df.field, value, download_url)
+        return FormWidget.represent(df.field, value, download_url)
 
 class Link(object):
     _class = types.link._class
@@ -466,9 +466,8 @@ class Link(object):
                 _id = self._id
             )
         
-
-class SingleChild(object):
-    _class = types.link._class
+class ManyChilds(object):
+    #_class = types.table._class
     
     def __init__(self, doc_field):
         self.doc_field = doc_field
@@ -508,41 +507,15 @@ class SingleChild(object):
         name = attr.pop('_name')
         value = attr['value']
         
-        record = self.db.get_document(self.document_referenced, value)
+        record = self.db.get_document(self.document_referenced, value) if value else None
         if record and hasattr(record, self.label):
             attr['value'] = record[self.label]
             
-        
-        
-class Property(object):
-    _class = types.property._class
-    _row_id_sufix = '_row'
-    _property_row_prefix = 'property'
-    
-    def __init__(self, doc_field, value, **attrs):
-        #TODO0: Continuar a implementação do Widget Property
-        from helpers.properties import PropertyManager
-        self.doc_field = doc_field
-        self.groups = value.keys()
-        self._id = 'properties_for_'
-        
-        self._proper = PropertyManager(self, value)
-        
-    def _build_group(self, groupname, groupdata):
         return DIV(
-            
-            _id=groupname,
+            label(df)
         )
-        
-    def build(self):
-        label = lambda f: LABEL(pretty(f.label or f.name), _for=f.name)
-        
-        widget = DIV(
-            _class='acordion'
-        )
-        
 
-class Suggest(AutocompleteWidget):
+class Suggest(Link):
     _class = vtypes.suggest._class
     
     def __init__(self, request, df, id_df=None, db=None, orderby=None,
@@ -550,13 +523,13 @@ class Suggest(AutocompleteWidget):
                  keyword = '_autocomplete_%(tablename)s_%(fieldname)s',
                  min_length=2, help_fields=None, help_string=None):
         self._class = ' '.join([df.df_type, self._type])
-        AutocompleteWidget.__init__(
+        Link.__init__(
             request, df.field, id_df.field if id_df else None, db, orderby,
             limitby, distinct, keyword, min_length, help_fields, help_string
         )
         
     def __call__(self, df, value, **attrs):
-        return AutocompleteWidget.__call__(self, df.field, value, **attrs)
+        return Link.__call__(self, df.field, value, **attrs)
 
 class Virtual(FormWidget):
     _class = 'virtual-field-widget'
@@ -576,15 +549,6 @@ class Virtual(FormWidget):
     def widget(cls, df, value, **attrs):
         
         raise NotImplementedError
-    
-class Table(Virtual):
-    _class = vtypes.table._class
-    
-    @classmethod
-    def widget(cls, df, value, **attrs):        
-        attr = cls._attributes(df, {}, **attrs)
-        
-        return DIV(df.get_child(df_type.get_option('child')), **attr)
     
 class SectionBreak(Virtual):
     _class = vtypes.sectionbreak._class + ' row-fluid'
@@ -635,7 +599,6 @@ widgets = Storage(
     upload = Filelink,
     suggest = Suggest,
     link = Link,
-    table = Table,
     sectionbreak = SectionBreak,
     columnbreak = ColumnBreak,
     button = Button,
@@ -657,6 +620,14 @@ def widget_help(strhelp):
 
 
 class Document(DIV):
+    icons = Storage({
+        'new': I(_class='icon-plus'),
+        'list': I(_class='icon-list-alt'),
+        'print': I(_class='icon-print'),
+        'send': I(_class='icon-envelope'),
+        'delete': I(_class='icon-trash')
+    })
+    url_binds = Storage()
     def __init__(self,
         document,
         submit_button = T('Save'),
@@ -664,6 +635,7 @@ class Document(DIV):
         actions = ['new', 'list', 'print', 'send', 'delete'],
         **attrs
     ):
+    
         DIV.__init__(self, _class="page", **attrs)
         self.T = current.T
         self.response = current.response
@@ -671,11 +643,27 @@ class Document(DIV):
         self.session = current.session
     
         self.document = document
+        self.db = self.document.META._db
+        
+        self.storage = storage.session(prefix=document.META.doc_name + '_' + (str(self.document.id) or 'new'))
+        
         self.submit_button = submit_button
         self.readonly = readonly
         self.actions = actions
         
-        self.components=self.build_page()
+        self.init_managers()
+        
+        if hasattr(self.request, 'application'):
+            self.callback()
+        
+        self.build_page()
+    
+    def callback(self):
+        pass
+ 
+    def init_managers(self):
+        from helpers.manager import TagManager
+        self.manager_tag = TagManager(self, self.db, self.document, self.storage)
         
     def formstyle_document_help(self, strhelp):        
         if len(strhelp or '')<=30:
@@ -686,7 +674,6 @@ class Document(DIV):
                 '_data-placement': 'bottom',
                 '_data-trigger': 'hover',
                 '_data-content': strhelp or '',
-                
             }
             return SPAN( A(I(_class='icon-exclamation-sign'), **attrs), _class='help-block')
         
@@ -742,7 +729,11 @@ class Document(DIV):
         return element
     
     def build_page(self):
-        return self.build_page_header(), self.build_page_content()
+        self.components = [
+            self.build_page_header(), 
+            self.build_page_content(), 
+            self.buid_page_menu()
+        ]
         
     def build_page_header(self):
         
@@ -775,8 +766,12 @@ class Document(DIV):
         
         return DIV(
             UL(
-               LI()
-            )
+               LI(self.T('Actions'), _class='nav-header'),
+               *[LI(A(self.icons[action], action.lower().capitalize(), _href=URL(vars={'action': action}))) for action in self.actions],
+               _class='nav nav-tabs nav-stacked'
+            ),
+            self.manager_tag.widget,
+            _class='page-menu'
         )
         
                 

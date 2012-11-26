@@ -149,7 +149,11 @@ ul.navigation li a {
 
 .page-menu {
 	float: right;
-	margin-right: 30px;
+	margin-right: 20px;
+}
+
+.page-menu ul.nav.nav-stacked {
+	width: 190px;
 }
 
 /* Forms */
@@ -225,7 +229,17 @@ ul.nav.nav-tabs.nav-stacked li a i {
 .input-apped button.ui-datepicker-trigger.btn.btn-mini i {
 	margin-top: 4px;
 	margin-bottom: 5px;
-	}
+}
+
+/* Comments */
+form.document-comments input {
+	width: 130px;
+}
+
+/* Tags */
+form.tags {
+	margin-left: 5px;
+}
 	
 /* Tables */
 			

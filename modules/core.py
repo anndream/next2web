@@ -18,7 +18,7 @@ from gluon.tools import Auth, Crud, Mail
 from gluon.dal import DAL, Row
 from helpers.field import fields
 from datamodel.user import User
-from gluon.storage import Storage, StorageList
+from gluon.storage import Storage
 from gluon import current
 
 
@@ -142,7 +142,7 @@ class LDS(DataBase):
     def __init__(self, config):
         
         from datamodel.document import Document, DocumentField, Tags, DocumentTag, DocumentComment
-        
+                
         self.config = config
         DataBase.__init__(self, config, [Document, DocumentField, Tags, DocumentTag, DocumentComment])
     
@@ -160,7 +160,7 @@ class LDS(DataBase):
         else:
             row = self.load_document(doc_name)
             if md5!=row.property('info', 'definition_hash'):
-                load_definition(self, path)
+                #load_definition(self, path)
                 row.update_property('info', 'definition_hash', md5)
     
     def has_document(self, document_name):
@@ -174,7 +174,8 @@ class LDS(DataBase):
         meta = DocumentMeta(self, **row.as_dict())
         if hasattr(row, 'update_record'):
             setattr(meta, 'update_record', getattr(row, 'update_record'))
-        self.define_datamodels([meta.datamodel()])
+        if getattr(meta, "doc_istable", False):
+            self.define_datamodels([meta.datamodel()])
         return meta
 
     def get_document(self, document_name, data_id=None):
@@ -187,6 +188,25 @@ class LDS(DataBase):
         if hasattr(row, 'update_record'):
             setattr(document, 'update_record', getattr(row, 'update_record'))
         return document
+
+    def get_documents(self, documents, query):
+        for document in documents:
+            self.load_document(document)
+        return self(query).select(*[self[document].ALL for document in documents])
+
+    def store_files(self, files):
+        stored = []
+        for title, filename, filedata in files:
+            stored.append(self.store_file(title, filename, filedata))
+        return stored
+        
+    def store_file(self, title, filename, filedata):
+        return self.File.insert({
+            'title': title,
+            'filename': filename,
+            'path': self.File.path.store(filedata)
+        })
+        
         
 class DocumentMeta(Row):
     def __init__(self, db, *args, **kwargs):
@@ -208,8 +228,8 @@ class DocumentMeta(Row):
         class Document(BaseModel):
             __name__ = self.doc_name
             tablename = self.doc_tablename
-            def set_properties(cls):
-                cls.fields = _fields
+            def set_properties(self):
+                self.fields = _fields
                 
         return Document
 

@@ -130,3 +130,35 @@ CREATE TABLE auth_cas(
     renew CHAR(1)
 );
 success!
+timestamp: 2012-11-26T14:36:56.742000
+CREATE TABLE tabDocument(
+    id INT AUTO_INCREMENT NOT NULL,
+    doc_name VARCHAR(255) NOT NULL UNIQUE,
+    doc_title VARCHAR(255) NOT NULL,
+    doc_description LONGTEXT,
+    doc_parent INT, INDEX doc_parent__idx (doc_parent), FOREIGN KEY (doc_parent) REFERENCES tabDocument (id) ON DELETE CASCADE,
+    doc_tablename VARCHAR(255) NOT NULL,
+    doc_meta LONGTEXT,
+    is_active CHAR(1),
+    created_on DATETIME,
+    created_by INT, INDEX created_by__idx (created_by), FOREIGN KEY (created_by) REFERENCES auth_user (id) ON DELETE CASCADE,
+    modified_on DATETIME,
+    modified_by INT, INDEX modified_by__idx (modified_by), FOREIGN KEY (modified_by) REFERENCES auth_user (id) ON DELETE CASCADE,
+    PRIMARY KEY(id)
+) ENGINE=InnoDB CHARACTER SET utf8;
+timestamp: 2012-11-26T14:52:51.727000
+CREATE TABLE tabDocument(
+    id INT AUTO_INCREMENT NOT NULL,
+    doc_name VARCHAR(255) NOT NULL UNIQUE,
+    doc_title VARCHAR(255) NOT NULL,
+    doc_description LONGTEXT,
+    doc_parent INT, INDEX doc_parent__idx (doc_parent), FOREIGN KEY (doc_parent) REFERENCES tabDocument (id) ON DELETE CASCADE,
+    doc_tablename VARCHAR(255) NOT NULL,
+    doc_meta LONGTEXT,
+    is_active CHAR(1),
+    created_on DATETIME,
+    created_by INT, INDEX created_by__idx (created_by), FOREIGN KEY (created_by) REFERENCES auth_user (id) ON DELETE CASCADE,
+    modified_on DATETIME,
+    modified_by INT, INDEX modified_by__idx (modified_by), FOREIGN KEY (modified_by) REFERENCES auth_user (id) ON DELETE CASCADE,
+    PRIMARY KEY(id)
+) ENGINE=InnoDB CHARACTER SET utf8;

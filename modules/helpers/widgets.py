@@ -658,12 +658,15 @@ class Document(DIV):
         
         self.build_page()
     
-    def callback(self):
-        pass
- 
     def init_managers(self):
-        from helpers.manager import TagManager
+        from helpers.manager import TagManager, CommentManager
+        
         self.manager_tag = TagManager(self, self.db, self.document, self.storage)
+        self.manager_comment = CommentManager(self, self.db, self.document, self.storage)
+    
+    def callback(self):
+        self.manager_tag.callback()
+        self.manager_comment.callback()
         
     def formstyle_document_help(self, strhelp):        
         if len(strhelp or '')<=30:
@@ -764,6 +767,9 @@ class Document(DIV):
                 
     def buid_page_menu(self):
         
+        print (self.manager_tag.widget.xml())
+        print (self.manager_comment.widget.xml())
+        
         return DIV(
             UL(
                LI(self.T('Actions'), _class='nav-header'),
@@ -771,6 +777,7 @@ class Document(DIV):
                _class='nav nav-tabs nav-stacked'
             ),
             self.manager_tag.widget,
+            self.manager_comment.widget,
             _class='page-menu'
         )
         

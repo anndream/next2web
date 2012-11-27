@@ -7,9 +7,8 @@ Created on 23/11/2012
 '''
 
 from base import BaseManager
-from gluon.html import FORM, INPUT, URL, SCRIPT, TAG, DIV
+from gluon.html import FORM, INPUT, URL, SCRIPT, TAG, DIV, SPAN
 from gluon import current
-from gluon.compileapp import LOAD
 from gluon.http import HTTP
 
 def pretty(tag):
@@ -18,7 +17,9 @@ def pretty(tag):
 class TagManager(BaseManager):
     _form = None
     def __init__(self, *args, **kwargs):
-        BaseManager.__init__(self, *args, **kwargs)
+        super(TagManager, self).__init__(*args, **kwargs)
+        
+        self.T = current.T
         
         if not self._part_name:
             self._part_name = self.__class__.__name__
@@ -34,21 +35,22 @@ class TagManager(BaseManager):
     
     def callback(self):
         if self.current_url == URL(**self.base_url_all_tags):
-            raise HTTP(200, self.list_all_tags())
+            raise HTTP(200, (self.list_all_tags() or '[]'))
         if self.current_url == URL(**self.base_url_post):
             raise HTTP(200, self.validate_and_save())
     
     @property
     def widget(self):
-        self.callback()
         self.build_components()
         return DIV(
             *self.components
         )
     
     def build_components(self):
-        self.components.append(self.form)
-        self.components.append(self.script())
+        if not self.components:
+            self.components.append(SPAN(self.T('Tags'), _class='nav-header'))
+            self.components.append(self.form)
+            self.components.append(self.script())
         
     def validate_and_save(self):
         if self.form.validate():
@@ -156,7 +158,7 @@ class TagManager(BaseManager):
                 self.response.js = ''
             self.response.js += script.strip()
             return TAG['']()
-        return SCRIPT(script)
+        return SCRIPT(script.strip())
     
     def store(self):
         self.update_tags(self.data)

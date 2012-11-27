@@ -2,3 +2,4 @@
 
 from base import BaseManager
 from tag import TagManager
+from comment import CommentManager

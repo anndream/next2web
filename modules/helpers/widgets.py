@@ -6,12 +6,11 @@ Created on 25/10/2012
 @author: INFRA-PC1
 '''
 
-from gluon.storage import Storage, StorageList
+from gluon.storage import Storage
 from gluon import current, validators
 from helpers.document import types, vtypes
 from gluon.html import *
 from gluon.http import HTTP
-from helpers import process_form
 from gluon.compileapp import LOAD
 
 
@@ -762,13 +761,11 @@ class Document(DIV):
         return DIV(
                    FORM(self.formstyle_document()), 
                    DIV(_class='dialogs'),
+                   current.response.toolbar(),
                    _class='page-content'
                 )
                 
     def buid_page_menu(self):
-        
-        print (self.manager_tag.widget.xml())
-        print (self.manager_comment.widget.xml())
         
         return DIV(
             UL(
@@ -776,8 +773,8 @@ class Document(DIV):
                *[LI(A(self.icons[action], action.lower().capitalize(), _href=URL(vars={'action': action}))) for action in self.actions],
                _class='nav nav-tabs nav-stacked'
             ),
-            self.manager_tag.widget,
-            self.manager_comment.widget,
+            LOAD(ajax=True, ajax_trap=True, **self.manager_tag.base_url_tag),
+            LOAD(ajax=True, ajax_trap=True, **self.manager_comment.base_url_form_comment),
             _class='page-menu'
         )
         

@@ -1,13 +1,11 @@
 
 from gluon import current
-
 from helpers import temp_store_file, temp_get_file, temp_del_file
 
 class BaseStorage(object):
     KEY = 'storage'
     DATA_KEY = 'storage_data'
     FILE_KEY = 'storage_file'
-    EXTRA_KEY = 'storage_extra'
      
     def __init__(self, prefix):        
         self.prefix = 'stored_%s' % prefix
@@ -18,7 +16,6 @@ class BaseStorage(object):
             self.KEY : None,
             self.DATA_KEY: {},            
             self.FILE_KEY: {},
-            self.DATA_KEY: {}
         }
         
     def reset(self):
@@ -32,19 +29,17 @@ class BaseStorage(object):
         
     current = property(_get_current, _set_current)
     
-    def _get_extra_data(self):
-        return self.data[self.EXTRA_DATA_KEY]
-    
-    def _set_extra_data(self, extra_data ):
-        self.data[self.EXTRA_DATA_KEY] = extra_data
-    
-    extra_data = property(_get_extra_data, _set_extra_data)
-    
     def get_data(self, step):
-        return self.data[self.KEY][step]
+        if not self.data[self.DATA_KEY].has_key(step):
+            self.data[self.DATA_KEY][step] = []
+        return self.data[self.DATA_KEY][step]
     
     def set_data(self, step, cleaned_data):
-        self.data[self.KEY][step] = cleaned_data
+        if step!=self.current:
+            self.current = step
+        if not self.data[self.DATA_KEY].has_key(step):
+            self.data[self.DATA_KEY][step] = []
+        self.data[self.DATA_KEY][step] = cleaned_data
         
     data = property(get_data, set_data)
         

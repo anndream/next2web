@@ -156,6 +156,25 @@ ul.navigation li a {
 	width: 190px;
 }
 
+/* Page Menu Comments */
+
+.comment-container {
+	margin-left: 10px;
+}
+
+.comment-row {
+	margin-bottom: 5px;
+}
+
+.comment-text {
+	font-weight: bold;
+	width: 180px;
+}
+
+.comment-on {
+	float: right;
+}
+
 /* Forms */
 		
 .control-group .help-block {

@@ -29,6 +29,15 @@ def safe_float(x):
         return float(x)
     except ValueError:
         return 0.0
+    
+def safe_bool(x):
+    trues = ['true', 'yes', 'y', '1']
+    falses = ['false', 'no', 'n', '0']
+    if x.lower() in trues:
+        return True
+    elif x.lower() in falses:
+        return False
+    return None
 
 month_name = ['', T('Jan'), T('Feb'), T('Mar'), T('Abr'), T('May'), T('Jun'), T('Jul'), T('Ago'), T('Sep'), T('Oct'), T('Nov'), T('Dec')]
 month_name_full = ['', T('January'), T('February'), T('March'), T('April'), T('May'), T('June'), T('August'), T('September'), T('Octuber'), T('November'), T('December')]
@@ -65,3 +74,20 @@ def get_key():
     from gluon.tools import Auth
     return Auth.get_or_create_key()
     
+    
+def ajax_set_files(files):
+    #http://dev.s-cubism.com/plugin_anytime_widget
+    if current.request.ajax:
+        current.response.js = (current.response.js or '') + """;(function ($) {
+var srcs = $('script').map(function(){return $(this).attr('src');}),
+    hrefs = $('link').map(function(){return $(this).attr('href');});
+$.each(%s, function() {
+    if ((this.slice(-3) == '.js') && ($.inArray(this.toString(), srcs) == -1)) {
+        var el = document.createElement('script'); el.type = 'text/javascript'; el.src = this;
+        document.body.appendChild(el);
+    } else if ((this.slice(-4) == '.css') && ($.inArray(this.toString(), hrefs) == -1)) {
+        $('<link rel="stylesheet" type="text/css" href="' + this + '" />').prependTo('head');
+        if (/* for IE */ document.createStyleSheet){document.createStyleSheet(this);}
+}});})(jQuery);""" % ('[%s]' % ','.join(["'%s'" % f.lower().split('?')[0] for f in files]))
+    else:
+        current.response.files[:0] = [f for f in files if f not in current.response.files]

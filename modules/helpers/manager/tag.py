@@ -29,42 +29,44 @@ class TagManager(BaseManager):
         self.request = current.request
         self.response = current.response
         
-        self.base_url_all_tags = dict(r=self.request, c=self.request.controller, f=self.request.function+'.json', args=self.request.args, vars={'__document_tag_form': self.document.META.doc_name, 'method': 'all_tags'})
-        self.base_url_tag = dict(r=self.request, c=self.request.controller, f=self.request.function+'.load', args=self.request.args, vars={'__document_tag_form': self.document.META.doc_name})
-        self.base_url_post = dict(r=self.request, c=self.request.controller, f=self.request.function+'.load', args=self.request.args, vars={'__document_tag_form': self.document.META.doc_name, 'method': 'post'})
+        self.base_url_all_tags = dict(r=self.request, c=self.request.controller, f=self.request.function, args=self.request.args, vars={'__document_tag_form': self.document.META.doc_name, '__action': 'all_tags'})
+        self.base_url_tag = dict(r=self.request, c=self.request.controller, f=self.request.function, args=self.request.args, vars={'__document_tag_form': self.document.META.doc_name, '__action': 'form'})
     
     def callback(self):
-        if self.current_url == URL(**self.base_url_all_tags):
-            raise HTTP(200, (self.list_all_tags() or '[]'))
-        if self.current_url == URL(**self.base_url_post):
-            raise HTTP(200, self.validate_and_save())
-    
+        if '__document_tag_form' in self.request.vars and self.request.vars['__document_tag_form'] == self.document.META.doc_name:
+            if '__action' in self.request.vars and self.request.vars['__action'] == 'form':
+                raise HTTP(200, self.validate_and_save())
+            elif '__action' in self.request.vars and self.request.vars['__action'] == 'all_tags':
+                raise HTTP(200, self.list_all_tags() or '[]')
+            
     @property
     def widget(self):
-        self.build_components()
         return DIV(
-            *self.components
+            *self.build_components()
         )
     
     def build_components(self):
-        if not self.components:
-            self.components.append(SPAN(self.T('Tags'), _class='nav-header'))
-            self.components.append(self.form)
-            self.components.append(self.script())
-        
-    def validate_and_save(self):
-        if self.form.validate():
-            self.save()
-        self.build_components()
-        return self.xml()        
+        components = []
+        components.append(SPAN(self.T('Tags'), _class='nav-header'))
+        components.append(self.form)
+        components.append(self.script())
+        return components
     
     def list_all_tags(self):
         return [row.tag_name for row in self.db(self.db.Tags.id>0).select(self.db.Tags.tag_name)]
     
-    def list_tags(self):
+    def list_tags_in_db(self):
         return [row.tag_name for row in self.db((self.db.DocumentTag.document==self.document.META.id)&
                                                 (self.db.DocumentTag.data_id==self.document.id)&
                                                 (self.db.DocumentTag.tag==self.db.Tags.id)).select(self.db.Tags.tag_name)]
+    
+    def list_tags_in_session(self):
+        return self.data
+    
+    def list_tags(self):
+        tags = self.list_tags_in_session()
+        tags.extend(self.list_tags_in_db())
+        return tags
     
     def tag_referenced_by_others(self, tag_id):
         return self.db(self.db.DocumentTag.tag==tag_id).count()>0
@@ -102,8 +104,8 @@ class TagManager(BaseManager):
         old_tags = self.list_tags()
         if not isinstance(tags, list):
             if isinstance(tags, basestring):
-                if ', ' in tags:
-                    tags=tags.split(' ,')
+                if ' ' in tags:
+                    tags=tags.split(' ')
                 else:
                     tags = tags.split(',')
             else:
@@ -121,42 +123,60 @@ class TagManager(BaseManager):
         return self.xml()
 
     @property            
-    def form(self):
+    def form(self):            
         if not self._form:
             self._form = FORM(
             INPUT(_type='hidden', _name=self._name, _class='tags', _style='width: 180px;', value=', '.join(self.list_tags())),
-            _method = 'post',
-            _action = URL(**self.base_url_post),
             _id=self._id,
             _class='tags'
         )
         return self._form
-        
+    
+    def validate_and_save(self):
+        def processor(vars):
+            if self._name in vars:
+                return (True, vars[self._name].split(' ' if ' ' in vars[self._name] else ','))
+            
+        if self.form.accepts(self.request.vars):
+            self.save_data(processor)
+        self.build_components()
+        return self.widget.xml()        
+    
     def script(self):
-        self.response.files.append(URL(c='static', f='templates', args=['bootstrap', 'third-party', 'jQuery-Select2', 'select2.css']))
-        self.response.files.append(URL(c='static', f='templates', args=['bootstrap', 'third-party', 'jQuery-Select2', 'select2.min.js']))
+        from helpers import ajax_set_files
+        files = []
+        files.append(URL(c='static', f='templates', args=['bootstrap', 'third-party', 'jQuery-Select2', 'select2.css']))
+        files.append(URL(c='static', f='templates', args=['bootstrap', 'third-party', 'jQuery-Select2', 'select2.min.js']))
+        
+        ajax_set_files(files)
+        
         script = """
-                jQuery(document).ready(function(){
-                    var all_tags = [],
-                        element = jQuery('input[name=%(name)s]');
-                    jQuery.getJSON('%(url_all_tags)s', function (data) { all_tags = data });
-                    element.select2({
-                        'tags': all_tags,
-                        'tokenSeparators': [',', ' ']
-                    });
-                    element.on('change', function(){
-                        $('#%(id)s').submit();
-                    });
-                });
+                ;(function($){
+                    var el = $('input[name=%(name)s]');
+                    function load_tags(){
+                        var all_tags = [];
+                        $.getJSON('%(url_all_tags)s', function (data) { all_tags = data });
+                        el.select2({
+                            'tags': all_tags,
+                            'tokenSeparators': [',', ' ']
+                        });
+                        el.on('change', function(){
+                            $('#%(id)s').submit();
+                        });
+                    }
+                    if (el.select2 == undefined) {
+                        setTimeout(load_tags, 500);
+                        return true;
+                    }
+                    load_tags();
+                })(jQuery);
             """%{
                 'url_all_tags' : URL(**self.base_url_all_tags),
                 'id' : self._id,
                 'name' : self._name
              }
-        if self.response.ajax:
-            if not self.response.js:
-                self.response.js = ''
-            self.response.js += script.strip()
+        if self.request.ajax:
+            self.response.js = (self.response.js or '') + script.strip()
             return TAG['']()
         return SCRIPT(script.strip())
     

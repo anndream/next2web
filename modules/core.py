@@ -138,13 +138,44 @@ class LDS(DataBase):
     """
     _lazy_tables = {}
     _tables = {}
+    _documents_and_datamodels = {}
     
     def __init__(self, config):
         
-        from datamodel.document import Document, DocumentField, Tags, DocumentTag, DocumentComment
+        from datamodel.document import Document, DocumentField, Tags, DocumentTag, DocumentComment, File, DocumentFile
                 
         self.config = config
-        DataBase.__init__(self, config, [Document, DocumentField, Tags, DocumentTag, DocumentComment])
+        DataBase.__init__(self, config, [])
+        self.define_datamodels({'document': Document, 'document_field': DocumentField, 'tags': Tags, 'document_tag': DocumentTag, 'document_comment': DocumentComment, 'files': File, 'document_file': DocumentFile })
+    
+    def __getitem__(self, key, default=None):
+        if hasattr(self, key):
+            return getattr(self, key)
+        elif hasattr(self, self.datamodel(key)):
+            return getattr(self, self.datamodel(key))
+        elif default:
+            return default
+        else:
+            raise KeyError(key)
+    
+    def datamodel(self, document_name):
+        return self._documents_and_datamodels.get(document_name, None)
+    
+    def define_datamodels(self, datamodels):
+        # Datamodels will define tables
+        # datamodel ClassName becomes db attribute
+        # so you can do
+        # db.MyEntity.insert(**values)
+        # db.MyEntity(value="some")
+        for document in datamodels:
+            datamodel = datamodels[document]
+            if hasattr(self, datamodel.__name__):
+                return
+            obj = datamodel(self)
+            self.__setattr__(datamodel.__name__, obj.entity)
+            self._documents_and_datamodels[document] = datamodel.__name__
+            if obj.__class__.__name__ == "Account":
+                self.__setattr__("auth", obj)
     
     def _check_update(self, doc_name, definition):
         from helpers import md5sum
@@ -166,33 +197,40 @@ class LDS(DataBase):
     def has_document(self, document_name):
         return self(self.Document.doc_name == document_name.lower()).count()>0
     
+    def get_document_name_from_table(self, tablename):
+        document_row = self(self.Document.doc_tablename==tablename).select().first()
+        if document_row:
+            return document_row['doc_name']
+        else:
+            return None
+    
     def list_documents(self):
         return self().select(self.Document.ALL)
     
     def load_document(self, document_name):        
+        from gluon.dal import RecordUpdater, RecordDeleter
         row = self(self.Document.doc_name == document_name.lower()).select(self.Document.ALL).first() or Row({'id':None})
         meta = DocumentMeta(self, **row.as_dict())
-        if hasattr(row, 'update_record'):
-            setattr(meta, 'update_record', getattr(row, 'update_record'))
+        
         if getattr(meta, "doc_istable", False):
-            self.define_datamodels([meta.datamodel()])
+            self.define_datamodels([{document_name:meta.datamodel()}])
+            meta.update_meta = RecordUpdater(meta, self[self.datamodel(document_name)], meta.id)
+            meta.delete_meta = RecordDeleter(self[self.datamodel(document_name)], meta.id)
+        
         return meta
 
     def get_document(self, document_name, data_id=None):
+        from gluon.dal import RecordUpdater
+        
         meta = self.load_document(document_name)
         row = self[document_name][data_id] if data_id else Row({'id':None})
-        
+                    
         adapter = get_adapter(document_name, DocumentData)
         
         document = adapter(meta, **row.as_dict())
-        if hasattr(row, 'update_record'):
-            setattr(document, 'update_record', getattr(row, 'update_record'))
+        document.update_document = RecordUpdater(document, self[self.datamodel(document_name)], document.id)
+        
         return document
-
-    def get_documents(self, documents, query):
-        for document in documents:
-            self.load_document(document)
-        return self(query).select(*[self[document].ALL for document in documents])
 
     def store_files(self, files):
         stored = []
@@ -220,6 +258,20 @@ class DocumentMeta(Row):
         self.DOC_FIELDS = self._db((self._db.DocumentField.document == self.id)&(self._db.DocumentField.df_type!='property')).select(self._db.DocumentField.ALL) #& (self._db.DocumentField.df_type.belongs(fields.keys()))
         
         map(lambda x, parent=self, proper=PropertyManager: (setattr(x, 'PARENT', parent), PropertyManager(x, x.df_meta)), self.DOC_FIELDS)
+
+    def exist_doc_field(self, df_name):
+        return len(filter(lambda x: x.df_name==df_name, self.DOC_FIELDS)>0)        
+
+    def get_doc_field(self, df_name):
+        if self.exist_doc_field(df_name):
+            return filter(lambda x: x.df_name==df_name, self.DOC_FIELDS)[0]
+        raise ValueError('DocField %s does not exists in document %s'%(`df_name`, `self.doc_name`))
+
+    def get_df_title(self, df_name):
+        if self.exist_doc_field(df_name):
+            df = self.get_doc_field(df_name)
+            return df.df_title or df.df_name
+        raise ValueError('DocField %s does not exists in document %s'%(`df_name`, `self.doc_name`))
         
     def datamodel(self):
         from basemodel import BaseModel
@@ -239,23 +291,24 @@ class DocumentData(Row):
         Row.__init__(self, *args, **kwargs)
 
         self.COMMENTS = self.META._db((self.META._db.DocumentComment.document==self.META.id)&(self.META._db.DocumentComment.data_id==self.id))
-        self.TAGS = self.META._db((self.META._db.DocumentTag.document==self.META.id)&(self.META._db.DocumentTag.data_id==self.id))        
+        self.TAGS = self.META._db((self.META._db.DocumentTag.document==self.META.id)&(self.META._db.DocumentTag.data_id==self.id)&(self.META._db.Tags.id==self.META._db.DocumentTag.tag))        
     
     def save(self):
         if not hasattr(self, 'id'):
-            id = self.META._db[self.META.df_tablename].validate_and_insert(**self.__dict__)
-            self.id = id
+            _id = self.META._db[self.META.df_tablename].validate_and_insert(**self.__dict__)
+            if _id:
+                self.id = _id
         else:
-            self.update_record(**self.__dict__)
+            self.update_document(**self.__dict__)
         return self
     
     def send_to_trash(self):
-        self.update_record(is_active=False)
+        self.update_document(is_active=False)
         
-    delete_record = send_to_trash
+    delete_document = send_to_trash
     
     def recover_from_trash(self):
-        self.update_record(is_active=True)
+        self.update_document(is_active=True)
 
 class Account(Auth):
     """Auto configured Auth"""

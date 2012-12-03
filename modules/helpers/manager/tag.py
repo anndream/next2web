@@ -10,6 +10,7 @@ from base import BaseManager
 from gluon.html import FORM, INPUT, URL, SCRIPT, TAG, DIV, SPAN
 from gluon import current
 from gluon.http import HTTP
+from gluon.compileapp import LOAD
 
 def pretty(tag):
     return str(tag).lower().capitalize()
@@ -31,6 +32,16 @@ class TagManager(BaseManager):
         
         self.base_url_all_tags = dict(r=self.request, c=self.request.controller, f=self.request.function, args=self.request.args, vars={'__document_tag_form': self.document.META.doc_name, '__action': 'all_tags'})
         self.base_url_tag = dict(r=self.request, c=self.request.controller, f=self.request.function, args=self.request.args, vars={'__document_tag_form': self.document.META.doc_name, '__action': 'form'})
+
+        if hasattr(self.request, 'application'):
+            self.callback()
+            
+    @property
+    def component(self):
+        attrs = self.base_url_tag.copy()
+        attrs['ajax'] = True
+        attrs['ajax_trap'] = True
+        return LOAD(**attrs)
     
     def callback(self):
         if '__document_tag_form' in self.request.vars and self.request.vars['__document_tag_form'] == self.document.META.doc_name:

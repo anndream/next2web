@@ -162,3 +162,32 @@ CREATE TABLE tabDocument(
     modified_by INT, INDEX modified_by__idx (modified_by), FOREIGN KEY (modified_by) REFERENCES auth_user (id) ON DELETE CASCADE,
     PRIMARY KEY(id)
 ) ENGINE=InnoDB CHARACTER SET utf8;
+timestamp: 2012-11-28T14:10:19.868000
+CREATE TABLE tabFiles(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title CHAR(255) NOT NULL,
+    filename CHAR(255) NOT NULL,
+    path CHAR(512) NOT NULL,
+    contenttype CHAR(512) NOT NULL,
+    is_active CHAR(1),
+    created_on TIMESTAMP,
+    created_by INTEGER REFERENCES auth_user (id) ON DELETE CASCADE,
+    modified_on TIMESTAMP,
+    modified_by INTEGER REFERENCES auth_user (id) ON DELETE CASCADE
+);
+success!
+timestamp: 2012-11-28T14:10:20.042000
+CREATE TABLE tabDocumentFile(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    document INTEGER REFERENCES tabDocument (id) ON DELETE CASCADE,
+    data_id INTEGER NOT NULL,
+    file INTEGER NOT NULL,
+    is_active CHAR(1),
+    created_on TIMESTAMP,
+    created_by INTEGER REFERENCES auth_user (id) ON DELETE CASCADE,
+    modified_on TIMESTAMP,
+    modified_by INTEGER REFERENCES auth_user (id) ON DELETE CASCADE
+);
+success!
+timestamp: 2012-11-30T10:41:48.511000
+ALTER TABLE tabDocument ADD doc_parent_id INTEGER;

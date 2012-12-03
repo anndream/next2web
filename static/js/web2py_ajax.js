@@ -55,7 +55,7 @@ function web2py_trap_form(action,target) {
       if(!form.hasClass('no_trap'))
         form.submit(function(e){
          jQuery('.flash').hide().html('');
-         web2py_ajax_page('post',action,form.serialize(),target);
+         web2py_ajax_page('post',form.attr('action')||action,form.serialize(),target);
 	 e.preventDefault();
       });
    });

@@ -24,6 +24,7 @@ class Document(BaseModel):
             Field('doc_title', notnull=True),
             Field('doc_description', 'text'),
             Field('doc_parent', 'reference tabDocument'),
+            Field('doc_parent_id', 'integer'),
             Field('doc_tablename', 'string', notnull=True),
             Field('doc_meta', 'text', filter_in = filter_in, filter_out = filter_out),
         ]
@@ -96,7 +97,8 @@ class File(BaseModel):
         self.fields = [
             Field('title', 'string', length=255, notnull=True),
             Field('filename', 'string', length=255, notnull=True),
-            Field('path', 'upload', notnull=True)
+            Field('path', 'upload', notnull=True),
+            Field('contenttype', 'string', notnull=True)
         ]
         
 class DocumentFile(BaseModel):

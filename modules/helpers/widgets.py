@@ -11,10 +11,9 @@ from gluon import current, validators
 from helpers.document import types, vtypes
 from gluon.html import *
 from gluon.http import HTTP
-from gluon.compileapp import LOAD
-
 
 from helpers.storage import storage
+from helpers.manager import ChildManager
 
 T = current.T
 
@@ -25,14 +24,18 @@ class FormWidget(object):
     _row_id_sufix = '_row'
     
     @classmethod
+    def isrequired(cls, df):
+        return df.property('policy', 'is_required') == 'ALWAYS'
+    
+    @classmethod
     def requires(cls, df):
         req = []
-        if df.property('policy', 'is_required') == 'ALWAYS':
+        if cls.isrequired(df):
             req.append(validators.IS_NOT_EMPTY())
     
     @classmethod
     def label(cls, df):
-        return LABEL(df.df_label, _for = df.df_name) if df.df_label else TAG['']()
+        return LABEL('%s%s'%(df.df_label, SPAN('*', _style='color:red;') if cls.isrequired(df) else '' ), _for = df.df_name) if df.df_label else TAG['']()
     
     @classmethod
     def control(cls, df, value, **attrs):
@@ -464,55 +467,6 @@ class Link(object):
                 _class="control-group",
                 _id = self._id
             )
-        
-class ManyChilds(object):
-    #_class = types.table._class
-    
-    def __init__(self, doc_field):
-        self.doc_field = doc_field
-        self.db = self.doc_field.PARENT._db
-        self.table = self.doc_field.PARENT.doc_tablename
-        self.document_referenced = self.doc_field.property('type', 'document')
-        self.label = self.doc_field.property('type', 'label')
-        self.request = current.request
-        
-        self.text_id = 'text_for_'%self.doc_field.df_name
-        
-        if hasattr(self.request, 'application'):
-            self.url_form = URL(args=self.request.args, vars={'__meta_form': self.doc_field.df_name})
-            self.url_storage = URL(r=self.request, c=self.request.controller, f=self.request.function, vars={'__meta_data': self.doc_field.df_name})
-            self.callback()
-        else:
-            self.url_form = self.request
-            self.url_storage = self.request
-    
-    def callback(self):
-        pass
-    
-    def build(self, df, value, **attributes):
-        labelize = lambda label: ' '.join([x.lower().capitalize() for x in str(label).replace(' ', '_').split('_')])
-        label = lambda df: LABEL(labelize(df.df_label or df.df_name), _for=df.df_name)
-        
-        default = {
-            '_type': 'text',
-            'value': (not value is None and str(value)) or ''
-        }
-        
-        _id = '%s_%s' %(df.PARENT.doc_name, df.df_name)
-        
-        attr = String._attributes(df, default, **attributes)
-        attr['_id'] = self.text_id
-        attr['_class'] = 'link-child'
-        name = attr.pop('_name')
-        value = attr['value']
-        
-        record = self.db.get_document(self.document_referenced, value) if value else None
-        if record and hasattr(record, self.label):
-            attr['value'] = record[self.label]
-            
-        return DIV(
-            label(df)
-        )
 
 class Suggest(Link):
     _class = vtypes.suggest._class
@@ -616,8 +570,6 @@ def widget_help(strhelp):
         }
         return SPAN( A(I(_class='icon-exclamation-sign'), **attrs), _class='help-block')
 
-
-
 class Document(DIV):
     icons = Storage({
         'new': I(_class='icon-plus'),
@@ -654,19 +606,17 @@ class Document(DIV):
         
         if hasattr(self.request, 'application'):
             self.callback()
-        
-        self.build_page()
     
     def init_managers(self):
-        from helpers.manager import TagManager, CommentManager
+        from helpers.manager import TagManager, CommentManager, FileManager
         
-        self.manager_tag = TagManager(self, self.db, self.document, self.storage)
-        self.manager_comment = CommentManager(self, self.db, self.document, self.storage)
+        self.manager_tag = TagManager(self.db, self.document, self.storage)
+        self.manager_comment = CommentManager(self.db, self.document, self.storage)
+        self.manager_file = FileManager(self.db, self.document, self.storage)
     
     def callback(self):
-        self.manager_tag.callback()
-        self.manager_comment.callback()
-        
+        pass
+    
     def formstyle_document_help(self, strhelp):        
         if len(strhelp or '')<=30:
             return SPAN(strhelp or '', _class='help-block')
@@ -728,7 +678,16 @@ class Document(DIV):
                 element.components.append(wgt)
             i += 1
             
-        return element
+        return element        
+                
+    def build_actions(self):
+        pass
+    
+class DocumentPage(Document):
+    def __init__(self, *args, **kwargs):
+        super(DocumentPage, self).__init__(*args, **kwargs)
+    
+        self.build_page()
     
     def build_page(self):
         self.components = [
@@ -759,7 +718,7 @@ class Document(DIV):
 
     def build_page_content(self):
         return DIV(
-                   FORM(self.formstyle_document()), 
+                   FORM(self.formstyle_document()).process(), 
                    DIV(_class='dialogs'),
                    current.response.toolbar(),
                    _class='page-content'
@@ -773,12 +732,150 @@ class Document(DIV):
                *[LI(A(self.icons[action], action.lower().capitalize(), _href=URL(vars={'action': action}))) for action in self.actions],
                _class='nav nav-tabs nav-stacked'
             ),
-            LOAD(ajax=True, ajax_trap=True, **self.manager_tag.base_url_tag),
-            LOAD(ajax=True, ajax_trap=True, **self.manager_comment.base_url_form_comment),
+            self.manager_file.component,
+            self.manager_tag.component,
+            self.manager_comment.component,
             _class='page-menu'
         )
-        
-                
-    def build_actions(self):
-        pass
     
+class ChildModal(Document, ChildManager):
+    _form = None
+    def __init__(self, 
+        document,
+        doc_field,
+        parent,
+        submit_button = T('Save'),
+        readonly = False,
+        actions = ['new', 'list', 'print', 'send', 'delete'],
+        **attrs
+    ):
+        Document.__init__(self, document, submit_button, readonly, actions, **attrs)
+        ChildManager.__init__(self, self.db, self.document, doc_field, parent, self.storage )
+        
+    def build_menu(self):
+        return DIV(
+            BUTTON(I(_class="icon-cog"), _class="btn pull-left", **{"_data-toggle": "dropdown"}),
+            UL(
+               LI(A(
+                    I(_class="icon-file"), 
+                    _tabindex="-1", 
+                    **{
+                       '_data-animation': 'true', 
+                       '_data-html': 'true', 
+                       '_data-placement': 'right', 
+                       '_data-trigger': 'manual', 
+                       '_data-content': '#popover_file_content', 
+                       '_data-title': self.T('Attachments')
+                       }
+                    )
+                  ),
+               LI(A(
+                    I(_class="icon-tag"), 
+                    _tabindex="-1", 
+                    **{
+                       '_data-animation': 'true', 
+                       '_data-html': 'true', 
+                       '_data-placement': 'right', 
+                       '_data-trigger': 'manual', 
+                       '_data-content': '#popover_tag_content', 
+                       '_data-title': self.T('Tags')
+                       }
+                    )
+                  ),
+               LI(A(
+                    I(_class="icon-comments"), 
+                    _tabindex="-1", 
+                    **{
+                       '_data-animation': 'true', 
+                       '_data-html': 'true', 
+                       '_data-placement': 'right', 
+                       '_data-trigger': 'manual', 
+                       '_data-content': '#popver_comment_content', 
+                       '_data-title': self.T('Comments')
+                       }
+                    )
+                  ),
+               _class="dropdown-menu",
+            ),
+            DIV(self.manager_file.component, _id="popover_file_content", _class='hide'),
+            DIV(self.manager_tag.component, _id="popover_tag_content", _class='hide'),
+            DIV(self.manager_comment.component, _id="popover_comment_content", _class='hide'),
+            _class="btn-group dropup",
+        )
+        
+    def build_modal(self):
+        self.components = DIV(
+            DIV(
+                H3(self.document.META.doc_name),
+                _class='modal-head'
+            ),
+            DIV(
+                DIV(
+                    self.build_script()
+                ),
+                _class='modal-body'
+            ),
+            DIV(
+                _class='modal-footer'
+            ),
+            _id = self._id,
+            _class="modal hide fade",
+            _rel=self._name
+        )
+    
+    def build_script(self):
+        script = """;(function($){
+            $('#%(modal_id)s').appendTo('.dialogs');
+        })(jQuery);"""%{
+            'modal_id': self._id,
+            'name': self._name,
+        }
+        if self.request.ajax:
+            self.response.js = (self.response.js or '') + script.strip()
+            return TAG['']()
+        else:
+            return SCRIPT(script.strip())
+    
+    @property
+    def form(self):
+        if not self._form:
+            self._form = FORM(self.formstyle_document(), _formname=self._name).process()
+        return self._form
+    
+    @property
+    def widget(self): 
+        return self.build_modal()
+    
+    def script(self):
+        return self.build_script()
+        
+        
+class ManyChilds(Document, ChildManager):
+    _form = None
+    def __init__(self, 
+        document,
+        doc_field,
+        parent,
+        submit_button = T('Save'),
+        readonly = False,
+        actions = ['new', 'list', 'print', 'send', 'delete'],
+        **attrs
+    ):
+        Document.__init__(self, document, submit_button, readonly, actions, **attrs)
+        ChildManager.__init__(self, self.db, self.document, doc_field, parent, self.storage )
+        
+    def build_table_header(self):
+        cols = self.document.property('type', 'columns')
+        columns = []
+        if not cols:
+            columns = [{'rel': df.df_name, 'label': df.df_label} for df in self.document.META.DOC_FIELDS if df.df_type in types.keys()]
+        else:
+            for col in cols:
+                df = self.document.META.get_doc_field(col)
+                columns.append({'rel': df.df_name, 'label': df.df_label})
+        
+        return THEAD(TR(*[TH(c['label'], _rel=c['rel']) for c in columns]))
+        
+    def build_table(self):
+        components = []
+            

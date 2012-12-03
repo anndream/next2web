@@ -2,10 +2,17 @@ import hashlib
 import os
 import locale
 from gluon import current
+from gluon.html import URL
 import datetime, time
+
+class ValidationError(Exception):
+    pass
 
 T = current.T
 locale.setlocale(locale.LC_ALL, '')
+
+if not current.response.message_log:
+    current.response.message_log = []
 
 def md5sum(filename):
     if not os.path.exists(filename):
@@ -15,6 +22,10 @@ def md5sum(filename):
         for chunk in iter(lambda: f.read(125*md5.block_size), b''):
             md5.update(chunk)
     return md5.hexdigest()
+
+def ID(size=8):
+    import random, string
+    return ''.join([random.choice(string.ascii_letters+string.digits) for x in range(size)])
 
 pretty = lambda txt: str(txt).lower().capitalize()
 
@@ -91,3 +102,21 @@ $.each(%s, function() {
 }});})(jQuery);""" % ('[%s]' % ','.join(["'%s'" % f.lower().split('?')[0] for f in files]))
     else:
         current.response.files[:0] = [f for f in files if f not in current.response.files]
+        
+def message(title, msg, small=False, raise_exception=False, as_table=False):
+    ajax_set_files([URL(c='static', f='templates', args=['bootstrap', 'third-party', 'bootbox', 'bootbox.min.js'])])
+    if as_table and isinstance(msg, (list, tuple)):
+        msg = '<table border="1px" style="border-collapse: collapse" cellpadding="2px">'+''.join(['<tr>'+''.join('<td>%s<%s>'%c for c in r)+'</tr>' for r in msg])+'</table>'
+    if small:
+        if not isinstance(current.response.flash, list):
+            current.response.flash = list()
+        current.response.flash.append({'title': title, 'msg': msg})
+    else:
+        current.response.message_log.append({'title': title, 'msg': msg or ''})
+    if raise_exception:
+        import inspect
+        if inspect.isclass(raise_exception) and issubclass(raise_exception, Exception):
+            raise raise_exception, msg
+        else:
+            raise ValidationError, msg
+        

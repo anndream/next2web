@@ -9,7 +9,7 @@ import os
 
 from handlers.base import Base
 from gluon.storage import Storage
-from helpers.widgets import Document as FORM
+from helpers.widgets import DocumentPage
 
 from core import Core
 
@@ -28,15 +28,15 @@ class Document(Base):
              
     def add(self):
         self.get()
-        self.context.form = FORM(self.context.document)
+        self.context.form = DocumentPage(self.context.document)
         
     def edit(self):
         self.get()
-        self.context.form = FORM(self.context.document)
+        self.context.form = DocumentPage(self.context.document)
 
     def delete(self):
         self.db.send_to_trash(self.request.args[0], self.request.args[1])
         
     def show(self):
         self.get()
-        self.context.form = FORM(self.context.document, readonly=True)
+        self.context.form = DocumentPage(self.context.document, readonly=True)

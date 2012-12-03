@@ -12,6 +12,8 @@ from gluon import current
 from gluon.tools import prettydate
 from gluon.http import HTTP
 from gluon.validators import IS_NOT_EMPTY
+from helpers import message
+from gluon.compileapp import LOAD
 
 class CommentManager(BaseManager):
     _form = None
@@ -28,24 +30,38 @@ class CommentManager(BaseManager):
         self.request = current.request
         self.response = current.response
         
-        self.base_url_form_comment = dict(r=self.request, c=self.request.controller, f=self.request.function, args=self.request.args, vars={'__document_comment_form': self.document.META.doc_name, '__action': 'form'})
+        self.base_url_comment = dict(r=self.request, c=self.request.controller, f=self.request.function, args=self.request.args, vars={'__document_comment_form': self.document.META.doc_name, '__action': 'form'})
         self.base_url_remove_comment = dict(r=self.request, c=self.request.controller, f=self.request.function, args=self.request.args, vars={'__document_comment_form': self.document.META.doc_name, '__action': 'remove'})
         self.base_url_all_comments = dict(r=self.request, c=self.request.controller, f=self.request.function, args=self.request.args, vars={'__document_comment_form': self.document.META.doc_name, '__action': 'all_comments'})
         self.base_url_last_comments = dict(r=self.request, c=self.request.controller, f=self.request.function, args=self.request.args, vars={'__document_comment_form': self.document.META.doc_name, '__action': 'last_comments'})
         
+        if hasattr(self.request, 'application'):
+            self.callback()
+            
+    @property
+    def component(self):
+        attrs = self.base_url_comment.copy()
+        attrs['ajax'] = True
+        attrs['ajax_trap'] = True
+        return LOAD(**attrs)
+        
     def callback(self): 
         if '__document_comment_form' in self.request.vars and self.request.vars['__document_comment_form'] == self.document.META.doc_name:
             if '__action' in self.request.vars and self.request.vars['__action'] == 'form':
-                raise HTTP(200, self.validate_and_save())
-            elif '__action' in self.request.vars and self.request.vars['__action'] == 'remove':
-                self.remove_comment(self.request.vars['__saved'], self.request.vars['__idx'])
-                raise HTTP(200, self.widget)
+                self.validate_and_save()
+            if '__action' in self.request.vars and self.request.vars['__action'] == 'remove':
+                self.remove_comment(self.request.vars['__saved'], int(self.request.vars['__idx']))
+            raise HTTP(200, self.widget)
         
     def list_comments(self):
         comments = [{'comment': row.comment, 'by': row.created_by, 'on': row.created_on, '__saved': (True, row[self.db.DocumentComment].id)} for row in self.db((self.db.DocumentComment.document==self.document.META.id)&
                                           (self.db.DocumentComment.data_id==self.document.id)).select(self.DocumentComment.ALL)]
         return comments
     
+    
+    def count_comments(self):
+        return len(self.data)+self.db((self.db.DocumentComment.document==self.document.META.id)&
+                              (self.db.DocumentComment.data_id==self.document.id)).count()
     
     def list_last_comments(self, limit=5):
         comments = self.list_last_comments_in_session(limit)
@@ -129,8 +145,9 @@ class CommentManager(BaseManager):
             self._form = FORM(
                 INPUT(_type='text', _name=self._name, _class='comment', _placeholder=self.T('Comment'), _style='width: 180px;', requires=IS_NOT_EMPTY()),
                 _id=self._id,
+                _action=URL(**self.base_url_comment),
                 _class='comments form-inline'
-            )
+            ).process()
         return self._form
             
     def _session_reindex(self):
@@ -138,18 +155,17 @@ class CommentManager(BaseManager):
             comment['__saved'] = (False, i)
     
     def validate_and_save(self):
-        def processor(vars):            
-            if self._name in vars:
+        def processor(_vars):            
+            if self._name in _vars:
                 data = self.data
-                data.insert(0, {'comment': vars[self._name], 'on': self.request.now, 'by': (self.document.AUTH.user.firt_name if hasattr(self.document, 'AUTH') else 1), '__saved': (False, len(data))})
-                self._session_reindex(data)
+                data.insert(0, {'comment': _vars[self._name], 'on': self.request.now, 'by': (self.document.AUTH.user.firt_name if hasattr(self.document, 'AUTH') else 1), '__saved': (False, len(data))})
+                self._session_reindex()
                 return (True, data)
             else:
                 return (False, None)
             
         if self.form.accepts(self.request.vars):
             self.save_data(processor)
-        return self.widget
             
     def script(self):
         script = ''
@@ -168,9 +184,13 @@ class CommentManager(BaseManager):
             base['vars'].update({'__saved': comment['__saved'][0], '__idx': comment['__saved'][1]})
             return URL(**base)
         
+        total = self.count_comments()
+        
         components = []
         components.append(SPAN(self.T('Comments'), _class='nav-header'))
         components.append(self.form)
+        if total:
+            components.append(TAG['small']('%d out of %d comments'%(5 if total>5 else total, total), _class='comment-total'))
         components.append(self.script())
         last_comments = self.list_last_comments()
         if last_comments:
@@ -188,17 +208,19 @@ class CommentManager(BaseManager):
                             TAG['small']('%s : %s'%(self.T('on'), prettydate(comment['on'], self.T)), _class='comment-on'),
                             _class='comment-help'
                         ),
-                        _class='comment-row'
+                        _class='comment-row',
                     )
-            )
+                )
             components.append(DIV(*comments, _class='comment-container'))
         return components
     
     @property            
     def widget(self):
         return DIV(
-            *self.build_components()
+            *self.build_components(),
+            _class='comment-component'
         )
         
     def store(self):
-        pass
+        for row in self.data:
+            self.add_comment(row['comment'])

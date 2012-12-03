@@ -15,30 +15,16 @@ from gluon.contrib.simplejson import loads
 
 T = current.T
 
-policy_readable = 'r'
-policy_writable = 'w'
-policy_unique = 'u'
-policy_unique_in_parent = 'p'
-policy_required = 'n'
-
-policy = Storage({
-    policy_readable: T('Readable'),
-    policy_writable: T('Writable'),
-    policy_unique: T('Unique'),
-    policy_unique_in_parent: T('Unique in parent'),
-    policy_required: T('Required')
-})
-
 status_draft = 'd'
 status_sended = 's'
 status_cancelled = 'c'
-status_for_exclusion = 'e'
+status_in_trash = 't'
 
 status = Storage({
     status_draft: T('Draft'),
     status_sended: T('Sended'),
     status_cancelled: T('Cancelled'),
-    status_for_exclusion: T('To Exclude')
+    status_in_trash: T('In Trash')
 })
 
 types = Storage({
@@ -270,10 +256,20 @@ vtypes = Storage({
         '_class': 'columnbreak',
         'label': T('Column Break'),
     }),
+    'childsingle': Storage({
+        'native': 'virtual',
+        '_class': 'child-single',
+        'label': 'Single Child',
+    }),
+    'childmany': Storage({
+        'native': 'virtual',
+        '_class': 'child-many',
+        'label': 'Many Childs'
+    }),
     'button': Storage({
        'native': 'virtual',
        '_class': 'button',
-       'label': T('Button'),   
+       'label': T('Button'),
     }),
 })
 

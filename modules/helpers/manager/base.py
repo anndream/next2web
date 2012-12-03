@@ -4,8 +4,7 @@ from gluon.storage import Storage
 
 class BaseManager(object):
     url_binds = Storage()
-    def __init__(self, parent, db, document, storager, part_name=None):
-        self.parent = parent
+    def __init__(self, db, document, storager, part_name=None):
         self.db = db
         self.document = document
         self._part_name = part_name

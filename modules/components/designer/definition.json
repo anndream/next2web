@@ -7,8 +7,7 @@
 		{
 			"idx": 1,
 			"df_name": "doc_section_1",
-			"df_type": "sectionbreak",
-			"df_label": ""
+			"df_type": "sectionbreak"
 		},
 		{
 			"idx": 2,
@@ -35,7 +34,7 @@
 		},
 		{
 			"idx": 6,
-			"df_name": "doc_column_break_1_2",
+			"df_name": "doc_column_1_2",
 			"df_type": "columnbreak"
 		},
 		{
@@ -55,7 +54,21 @@
 			"df_label": "Table Name"
 		},
 		{
-			"idx": 9,
+		  "idx": 9,
+		  "df_name": "doc_section_2",
+		  "df_type": "sectionbreak",
+		  "df_label": "fields"
+		},
+		{
+		  "idx": 10,
+		  "df_name": "doc_fields",
+		  "df_type": "childtable",
+		  "df_meta": [
+		      {"group": "type", "property": "document", "value": "documentfield"}
+		  ]
+		},
+		{
+			"idx": 11,
 			"df_name": "doc_meta",
 			"df_type": "property",
 			"df_default": [
@@ -83,13 +96,14 @@
 	"doc_tablename": "tabDocumentField",
 	"doc_fields": [
 		{
-			"idx": 1,
+			"idx": 2,
 			"df_name": "document",
 			"df_type": "link",
-			"df_typemeta": {
-				"document": "document",
-				"label": "doc_name"
-			}
+			"df_meta": [
+	           {"group": "type", "property": "document", "value": "document"},
+	           {"group": "type", "property": "label", "value": "doc_name"},
+	           {"group": "policy", "property": "is_readable", "value": "NEVER"}
+	       ]
 		},
 		{
 			"idx": 2,
@@ -112,7 +126,8 @@
 		{
 			"idx": 6,
 			"df_name": "df_label",
-			"df_type": "string"
+			"df_type": "string",
+			"df_label": "Label"
 		},
 		{
 			"idx": 7,
@@ -126,12 +141,12 @@
 			"df_name": "df_meta",
 			"df_type": "property",
 			"df_default": [
-				{"group": "policy", "type": "string", "property": "is_writable", "default": "ALWAYS", "options": ["ON_CREATE", "ON_UPDATE", "ALWAYS", "NEVER", "BASED_ON_RULE"]},
-				{"group": "policy", "type": "string", "property": "is_readable", "default": "ALWAYS", "options": ["ON_CREATE", "ON_UPDATE", "ALWAYS", "NEVER", "BASED_ON_RULE"]},
-				{"group": "policy", "type": "atring", "property": "is_required", "default": "NEVER", "options": ["ON_CREATE", "ON_UPDATE", "ALWAYS", "NEVER", "BASED_ON_RULE"]},
+				{"group": "policy", "type": "string", "property": "is_writable", "default": "ALWAYS", "options": ["ON_CREATE", "ON_UPDATE", "ALWAYS", "NEVER"]},
+				{"group": "policy", "type": "string", "property": "is_readable", "default": "ALWAYS", "options": ["ON_CREATE", "ON_UPDATE", "ALWAYS", "NEVER"]},
+				{"group": "policy", "type": "atring", "property": "is_required", "default": "NEVER", "options": ["ON_CREATE", "ON_UPDATE", "ALWAYS", "NEVER"]},
 				{"group": "visibility", "type": "string", "property": "represent"},
 				{"group": "visibility", "type": "boolean", "property": "hide_in_filter", "default": false},
-				{"group": "visibility", "type": "boolean", "property": "hide_in_report", "default": false},
+				{"group": "visibility", "type": "boolean", "property": "hide_in_report", "default": false}, 
 				{"group": "visilibity", "type": "boolean", "property": "hide_in_filter", "default": false}
 			]
 		}
@@ -164,10 +179,10 @@
             "idx": 2,
             "df_name": "comment",
             "df_type": "text",
-            "df_meta": {
-                {"group": "type", "property", "max_size": 255},
+            "df_meta": [
+                {"group": "type", "property": "max_size", "value": 255},
                 {"group": "policy", "property": "is_required", "value": "true"}
-            }
+            ]
         }
     ]
 }

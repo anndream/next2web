@@ -9,7 +9,7 @@ from gluon import current
 
 T=current.T
 
-from helpers.document import types, policy
+from helpers.document import types
 
 class Document(BaseModel):
     tablename = 'tabDocument'
@@ -39,6 +39,8 @@ class DocumentField(BaseModel):
         
         self.fields = [
             Field('document', 'reference tabDocument', notnull=True),
+            Field('doc_parent', 'reference tabDocument'),
+            Field('doc_parent_id', 'integer'),
             Field('idx', 'integer', notnull=True, default=1),
             Field('df_name', 'string', notnull=True),
             Field('df_type', 'string', notnull=True),

@@ -72,7 +72,7 @@ class PropertyManager(object):
                 row[0]['value'] = value
             else:
                 self._data.append({'group': group, 'property': name, 'value': value or prop})
-        else:
+        elif value:
             return value
         return prop
         

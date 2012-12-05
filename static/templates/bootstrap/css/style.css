@@ -144,6 +144,10 @@ ul.navigation li a {
 	border-bottom: 1px solid #eee;
 }
 
+.sectionbreak h2 {
+	margin: 0px;
+}
+
 
 /* Page Menu */
 
@@ -258,6 +262,13 @@ form.document-comments input {
 /* Tags */
 form.tags {
 	margin-left: 5px;
+}
+
+/* Childs */
+
+/* ChildModal */
+.childmodal {
+	width: 711px;
 }
 	
 /* Tables */

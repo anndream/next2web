@@ -13,12 +13,12 @@ from gluon.compileapp import LOAD
 from helpers import message
 
 class ChildManager(BaseManager):
-    def __init__(self, db, document, doc_field, parent, storager, part_name=None ):
-        BaseManager.__init__(self, db, parent, storager, part_name)
+    def __init__(self, db, document, doc_parent, storager, part_name=None ):
+        BaseManager.__init__(self, db, document, storager, part_name)
         
-        self.parent = self.parent
+        self.doc_parent = doc_parent
+                
         self.child_name = self.document.META.doc_name
-        self.doc_field = self.doc_field
         self.T = current.T
         self.request = current.request
         self.response = current.response
@@ -26,12 +26,13 @@ class ChildManager(BaseManager):
         if not self._part_name:
             self._part_name = self.__class__.__name__
         
-        self._id = '%s_%s_%s'%(self._part_name, self.child_name, self.parent.META.doc_name)
-        self._name = '%s_for_%s_on_%s'%(self._part_name, self.child_name, self.parent.META.doc_name)
+        self._id = '%s_%s_%s'%(self._part_name, self.child_name, self.doc_parent.META.doc_name)
+        self._name = '%s_for_%s_on_%s'%(self._part_name, self.child_name, self.doc_parent.META.doc_name)
         
-        self.base_url_child = dict(r=self.request, c=self.request.controller, f=self.request.function, args=self.request.args, vars={'__document_child_form_%s'%self.child_name: self.document.META.doc_name, '__action': 'form'})
-        self.base_url_child_edit = dict(r=self.request, c=self.request.controller, f=self.request.function, args=self.request.args, vars={'__document_child_form_%s'%self.child_name: self.document.META.doc_name, '__action': 'edit'})
-        self.base_url_child_remove = dict(r=self.request, c=self.request.controller, f=self.request.function, args=self.request.args, vars={'__document_child_form_%s'%self.child_name: self.document.META.doc_name, '__action': 'remove'})
+        self.base_url_child = dict(r=self.request, c=self.request.controller, f=self.request.function, args=self.request.args, vars={'__document_child_form_%s'%self.child_name: self.doc_parent.META.doc_name, '__action': 'table'})
+        self.base_url_child_edit = dict(r=self.request, c=self.request.controller, f=self.request.function, args=self.request.args, vars={'__document_child_form_%s'%self.child_name: self.doc_parent.META.doc_name, '__action': 'edit'})
+        self.base_url_child_remove = dict(r=self.request, c=self.request.controller, f=self.request.function, args=self.request.args, vars={'__document_child_form_%s'%self.child_name: self.doc_parent.META.doc_name, '__action': 'remove'})
+        self.base_url_child_childs = dict(r=self.request, c=self.request.cotnroller, f=self.request.function, args=self.request.args, vars={'__document_child_form_%s'%self.child_name: self.doc_parent.META.doc_name, '__action': 'childs'})
         
         self.callback()
         
@@ -43,41 +44,61 @@ class ChildManager(BaseManager):
         return  LOAD(**base)
     
     def callback(self):
-        if '__document_child_form_%s'%self.child_name in self.request.vars and self.request.vars['__document_child_form_%s'%self.child_name] == self.document.META.doc_name:
-            if '__action' in self.request.vars and self.request.vars['__action'] == 'form':
-                self.validate_and_save()
+        if '__document_child_form_%s'%self.child_name in self.request.vars and self.request.vars['__document_child_form_%s'%self.child_name] == self.doc_parent.META.doc_name:
+            if '__action' in self.request.vars and self.request.vars['__action'] == 'table':
+                raise HTTP(200, self.build_table().xml())
             if '__action' in self.request.vars and self.request.vars['__action'] == 'edit':
-                self.validate_and_save(self.request.vars['__saved'], self.request.vars['__idx'])
-            raise HTTP(200, self.widget)
+                self.document = self.get_child(self.request.vars['__saved'], self.request.vars['__idx'])
+                raise HTTP(200, self.form)
+            if '__action' in self.request.vars and self.request.vars['__action'] == 'childs':
+                #TODO: Future
+                raise self.build_components()
+            raise HTTP(200, self.build_modal())
     
-    def count_childs(self):
-        return self.db((self.db[self.child_name].document==self.document.META.id)&
-                       (self.db[self.child_name].doc_parent==self.parent.META.id)&
-                       (self.db[self.child_name].doc_parent_id==self.parent.id)).count()
+    def count_childs(self, child_name=None, doc_parent=None, doc_parent_id = None):
+        return self.db((self.db[child_name or self.child_name].document==self.document.META.id)&
+                       (self.db[child_name or self.child_name].doc_parent==(doc_parent or self.doc_parent.META.id))&
+                       (self.db[child_name or self.child_name].doc_parent_id==(doc_parent_id or self.doc_parent.id))).count()
     
-    def has_sub_childs(self):
-        return self.db((self.db[self.child_name].document==self.document.META.id)&
-                       (self.db[self.child_name].doc_parent==self.document.META.id)&
-                       (self.db[self.child_name].doc_parent_id==self.document.id)).count()>0
+    def has_sub_childs(self, child_name=None, doc_parent = None, doc_parent_id = None):
+        return self.db((self.db[child_name or self.child_name].document==self.document.META.id)&
+                       (self.db[child_name or self.child_name].doc_parent==(doc_parent or self.doc_parent.META.id))&
+                       (self.db[child_name or self.child_name].doc_parent_id==(doc_parent_id or self.doc_parent.id))).count()>0
+    
+    def list_sub_childs(self, child_name = None, doc_parent = None, doc_parent_id = None):
+        return self.db((self.db[child_name or self.child_name].document==self.document.META.id)&
+                       (self.db[child_name or self.child_name].doc_parent==(doc_parent or self.doc_parent.META.id))&
+                       (self.db[child_name or self.child_name].doc_parent_id==(doc_parent_id or self.doc_parent.id))).select(self.db[child_name or self.child_name].ALL)
     
     def list_childs(self):
-        childs = self.list_childs_in_session()
+        childs = []
+        childs.extend(self.list_childs_in_session())
         childs.extend(self.list_childs_in_db())
+        return childs
     
     def list_childs_in_session(self):
         return self.data
         
     def list_childs_in_db(self):
         childs = self.db((self.db[self.child_name].document==self.document.META.id)&
-                         (self.db[self.child_name].doc_parent==self.parent.META.id)&
-                         (self.db[self.child_name].data_id==self.parent.id)).select(self.db[self.child_name].ALL)
+                         (self.db.Document.doc_parent==self.doc_parent.META.id)&
+                         (self.db[self.child_name].doc_parent_id==self.doc_parent.id)&
+                         (self.db[self.child_name].document==self.db.Document.id)).select(self.db[self.child_name].ALL)
         
-        return childs or []
+        map(lambda x: x.__setitem__('__saved', (True, x.id)), childs)
+        
+        return childs
     
-    def get_child(self, child_id):
-        child_row = self.db((self.db[self.child_name].document==self.document.META.id)&
-                            (self.db[self.child_name].doc_parent==self.parent.META.id)&
-                            (self.db[self.child_name].data_id==self.parent.id)).select(self.db[self.child_name])
+    def get_child(self, saved, idx):
+        from helpers import safe_bool
+        
+        if safe_bool(saved):
+            return self.get_child_in_db(idx)
+        else:
+            return self.get_child_in_session(idx)
+    
+    def get_child_in_db(self, child_id):
+        child_row = self.db.get_document(self.child_name, child_id)
         if child_row:
             return child_row
         message(self.T('Children Lookup Error'), self.T('Unable to locate document children for this document'), True)
@@ -140,8 +161,14 @@ class ChildManager(BaseManager):
     def build_components(self):
         raise NotImplementedError
     
+    def build_modal(self):
+        raise NotImplementedError
+    
+    def build_table(self):
+        raise NotImplementedError
+    
     @property
-    def widget(self):
+    def cwidget(self):
         raise NotImplementedError
     
     def store(self):

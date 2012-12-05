@@ -121,7 +121,7 @@ sg9
 I01
 sg10
 g29
-ssS'doc_title'
+ssS'modified_on'
 p33
 (dp34
 g4
@@ -129,17 +129,18 @@ I512
 sg5
 I00
 sg6
-I3
+I12
 sg7
-S'CHAR(512) NOT NULL'
+S'TIMESTAMP'
 p35
 sg9
-I01
+I00
 sg10
-g29
-ssS'created_on'
+S'datetime'
 p36
-(dp37
+ssS'created_on'
+p37
+(dp38
 g4
 I512
 sg5
@@ -148,12 +149,11 @@ sg6
 I10
 sg7
 S'TIMESTAMP'
-p38
+p39
 sg9
 I00
 sg10
-S'datetime'
-p39
+g36
 ssS'doc_parent'
 p40
 (dp41
@@ -188,7 +188,7 @@ I00
 sg10
 S'integer'
 p47
-ssS'modified_on'
+ssS'doc_title'
 p48
 (dp49
 g4
@@ -196,14 +196,14 @@ I512
 sg5
 I00
 sg6
-I12
+I3
 sg7
-S'TIMESTAMP'
+S'CHAR(512) NOT NULL'
 p50
 sg9
-I00
+I01
 sg10
-g39
+g29
 ssS'id'
 p51
 (dp52
@@ -219,6 +219,5 @@ p53
 sg9
 I00
 sg10
-S'id'
-p54
+g51
 ss.

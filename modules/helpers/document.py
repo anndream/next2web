@@ -15,6 +15,11 @@ from gluon.contrib.simplejson import loads
 
 T = current.T
 
+yes_no = {
+    False : T('No'),
+    True : T('True')
+}
+
 status_draft = 'd'
 status_sended = 's'
 status_cancelled = 'c'
@@ -204,6 +209,7 @@ types = Storage({
             Field('document', 'reference tabDocuments', default=None, label=T('Document'), required=True),
             Field('label', 'reference tabDocumentFields', default=None, required=True, notnull=True),
             Field('help_string', 'string', default=None, label=T('Label Field')),
+            Field('search_in_childs', 'boolean', default=False, label=T('Allo'))
         ],
     }),
     'select': Storage({
@@ -261,10 +267,17 @@ vtypes = Storage({
         '_class': 'child-single',
         'label': 'Single Child',
     }),
-    'childmany': Storage({
+    'childtable': Storage({
         'native': 'virtual',
         '_class': 'child-many',
-        'label': 'Many Childs'
+        'label': 'Many Childs',
+        'option': [
+            Field('document', 'reference tabDocuments', ),
+            Field('columns', 'list:string', label=T('Columns')),
+            #Field('with_sub_childs', 'boolean', default=False, label=T('With sub-childs?'), requires=validators.IS_IN_SET(yes_no, zero=None)),
+            #Field('allow_links', 'boolean', default=False, label=T('Allow links'), requires=validators.IS_IN_SET(yes_no, zero=None)),
+            #Field('allow_file_links', 'boolean', default=False, label=T('Allow file-links'), requires=validators.IS_IN_SET(yes_no, zero=None))
+        ]
     }),
     'button': Storage({
        'native': 'virtual',

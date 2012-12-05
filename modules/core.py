@@ -21,7 +21,6 @@ from datamodel.user import User
 from gluon.storage import Storage
 from gluon import current
 
-
 adapters = Storage()
 
 class AdapterNotFound(Exception):
@@ -146,7 +145,7 @@ class LDS(DataBase):
                 
         self.config = config
         DataBase.__init__(self, config, [])
-        self.define_datamodels({'document': Document, 'document_field': DocumentField, 'tags': Tags, 'document_tag': DocumentTag, 'document_comment': DocumentComment, 'files': File, 'document_file': DocumentFile })
+        self.define_datamodels({'document': Document, 'documentfield': DocumentField, 'tags': Tags, 'documenttag': DocumentTag, 'documentcomment': DocumentComment, 'files': File, 'documentfile': DocumentFile })
     
     def __getitem__(self, key, default=None):
         if hasattr(self, key):
@@ -260,7 +259,7 @@ class DocumentMeta(Row):
         map(lambda x, parent=self, proper=PropertyManager: (setattr(x, 'PARENT', parent), PropertyManager(x, x.df_meta)), self.DOC_FIELDS)
 
     def exist_doc_field(self, df_name):
-        return len(filter(lambda x: x.df_name==df_name, self.DOC_FIELDS)>0)        
+        return len(filter(lambda x: x.df_name==df_name, self.DOC_FIELDS))>0        
 
     def get_doc_field(self, df_name):
         if self.exist_doc_field(df_name):
@@ -289,7 +288,7 @@ class DocumentData(Row):
     def __init__(self, meta, *args, **kwargs):
         self.META = meta
         Row.__init__(self, *args, **kwargs)
-
+        self['__saved'] = (True, self['id'])
         self.COMMENTS = self.META._db((self.META._db.DocumentComment.document==self.META.id)&(self.META._db.DocumentComment.data_id==self.id))
         self.TAGS = self.META._db((self.META._db.DocumentTag.document==self.META.id)&(self.META._db.DocumentTag.data_id==self.id)&(self.META._db.Tags.id==self.META._db.DocumentTag.tag))        
     

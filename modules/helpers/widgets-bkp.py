@@ -579,7 +579,6 @@ class Document(DIV):
         'delete': I(_class='icon-trash')
     })
     url_binds = Storage()
-    
     def __init__(self,
         document,
         submit_button = T('Save'),
@@ -604,6 +603,9 @@ class Document(DIV):
         self.actions = actions
         
         self.init_managers()
+        
+        if hasattr(self.request, 'application'):
+            self.callback()
     
     def init_managers(self):
         from helpers.manager import TagManager, CommentManager, FileManager
@@ -611,6 +613,9 @@ class Document(DIV):
         self.manager_tag = TagManager(self.db, self.document, self.storage)
         self.manager_comment = CommentManager(self.db, self.document, self.storage)
         self.manager_file = FileManager(self.db, self.document, self.storage)
+    
+    def callback(self):
+        pass
     
     def formstyle_document_help(self, strhelp):        
         if len(strhelp or '')<=30:
@@ -627,13 +632,9 @@ class Document(DIV):
     def _section_break(self, widget, i):
         _type = self.document.META.DOC_FIELDS[i].df_type
         while i < len(self.document.META.DOC_FIELDS) and _type != 'sectionbreak':
-            doc_field = self.document.META.DOC_FIELDS[i] 
-            df_name = doc_field.df_name
+            df_name = self.document.META.DOC_FIELDS[i].df_name
             subwidget = widgets[_type].widget(self.document.META.DOC_FIELDS[i], self.document[df_name] if hasattr(self.document, df_name) else '' )
-            if doc_field.property('policy', 'visible') == 'NEVER':
-                i += 1
-                continue
-            elif _type == 'columnbreak':
+            if _type == 'columnbreak':
                 subwidget, i = self._column_break(subwidget, i+1)
             widget.components.append(subwidget)
             if (i+1) >= len(self.document.META.DOC_FIELDS) or self.document.META.DOC_FIELDS[i+1].df_type == 'sectionbreak': 
@@ -646,14 +647,10 @@ class Document(DIV):
     def _column_break(self, widget, i):
         _type = _type = self.document.META.DOC_FIELDS[i].df_type
         while i < len(self.document.META.DOC_FIELDS) and _type not in ('sectionbreak', 'columnbreak'):
-            doc_field = self.document.META.DOC_FIELDS[i] 
-            df_name = doc_field.df_name
+            df_name = self.document.META.DOC_FIELDS[i].df_name
             subwidget = widgets[_type].widget(self.document.META.DOC_FIELDS[i], self.document[df_name] if hasattr(self.document, df_name) else '' )
             widget.components.append(subwidget)
-            if doc_field.property('policy', 'visible') == 'NEVER':
-                i += 1
-                continue
-            elif (i+1) >= len(self.document.META.DOC_FIELDS) or self.document.META.DOC_FIELDS[i+1].df_type in  ('sectionbreak', 'columnbreak') : 
+            if (i+1) >= len(self.document.META.DOC_FIELDS) or self.document.META.DOC_FIELDS[i+1].df_type in  ('sectionbreak', 'columnbreak') : 
                 break
             else:
                 i += 1
@@ -664,14 +661,10 @@ class Document(DIV):
         i = 0
         element = TAG['']()
         while i < len(self.document.META.DOC_FIELDS):
-            doc_field = self.document.META.DOC_FIELDS[i] 
-            _type = doc_field.df_type
-            df_name = doc_field.df_name
+            _type = self.document.META.DOC_FIELDS[i].df_type
+            df_name = self.document.META.DOC_FIELDS[i].df_name
             wgt = widgets[_type].widget(self.document.META.DOC_FIELDS[i], self.document[df_name] if hasattr(self.document, df_name) else '' )
-            if doc_field.property('policy', 'visible') == 'NEVER':
-                i += 1
-                continue
-            elif _type == 'sectionbreak':
+            if _type == 'sectionbreak':
                 subwgt, i = self._section_break(wgt, i+1)
                 i += 1
                 element.components.append(subwgt)
@@ -763,7 +756,6 @@ class ChildModal(Document, ChildManager):
             BUTTON(I(_class="icon-cog"), _class="btn pull-left", **{"_data-toggle": "dropdown"}),
             UL(
                LI(A(
-                    self.T('Attachments'),
                     I(_class="icon-file"), 
                     _tabindex="-1", 
                     **{
@@ -777,7 +769,6 @@ class ChildModal(Document, ChildManager):
                     )
                   ),
                LI(A(
-                    self.T('Tags'),
                     I(_class="icon-tag"), 
                     _tabindex="-1", 
                     **{
@@ -791,8 +782,7 @@ class ChildModal(Document, ChildManager):
                     )
                   ),
                LI(A(
-                    self.T('Comments'),
-                    I(_class="icon-comment"), 
+                    I(_class="icon-comments"), 
                     _tabindex="-1", 
                     **{
                        '_data-animation': 'true', 
@@ -813,34 +803,30 @@ class ChildModal(Document, ChildManager):
         )
         
     def build_modal(self):
-        return DIV(
+        self.components = DIV(
             DIV(
-                H3(self.document.META.doc_title),
-                _class='modal-header'
+                H3(self.document.META.doc_name),
+                _class='modal-head'
             ),
             DIV(
+                DIV(
+                    self.build_script()
+                ),
                 _class='modal-body'
             ),
             DIV(
-                self.build_menu(),
-                BUTTON(self.T('Close'), _class='btn', **{'_data-dismiss': 'modal'}),
-                BUTTON(self.T('Save Changes'), _class='btn btn-primary', _id="submit_%s"%self._id),
                 _class='modal-footer'
             ),
-            self.build_script_modal(),
             _id = self._id,
-            _class="childmodal modal hide fade",
-            **{'_data-backdrop': 'false'}
+            _class="modal hide fade",
+            _rel=self._name
         )
     
-    def build_script_modal(self):
+    def build_script(self):
         script = """;(function($){
-            $('div#%(id)s').appendTo('.dialogs');
-            $('#submit_%(id)s').on('click', function(){
-                $('form#%(id)s').submit();
-            });
+            $('#%(modal_id)s').appendTo('.dialogs');
         })(jQuery);"""%{
-            'id': self._id,
+            'modal_id': self._id,
             'name': self._name,
         }
         if self.request.ajax:
@@ -855,18 +841,16 @@ class ChildModal(Document, ChildManager):
             self._form = FORM(self.formstyle_document(), _formname=self._name).process()
         return self._form
     
-    @classmethod
-    def widget(cls, df, value, **attrs):
-        raise NotImplementedError
+    def widget(self): 
+        return self.build_modal()
     
     def script(self):
-        return self.build_script()  
+        return self.build_script()
         
         
 class ChildTable(ChildModal):
     _form = None
     _cols = None
-    
     def __init__(self, *args, **kwargs):
         ChildModal.__init__(self, *args, **kwargs)
                 
@@ -885,27 +869,29 @@ class ChildTable(ChildModal):
         return self._cols
     
     def build_table_header(self):
-        def url_add():
-            return ''
-        return THEAD(TR(*[TH(_class='hide'), TH(A(I(_class='icon-plus icon-white'),' ', self.T('Add'), _href=url_add(), _class='btn btn-mini btn-info'))]+[TH(c['label'], _rel=c['rel']) for c in self.columns]))
+        return THEAD(TR(*[TH(_class='_hide'), TH('#')]+[TH(c['label'], _rel=c['rel']) for c in self.columns]))
 
-    def get_representation(self, doc_field, data):
+    def get_representation(self, row, df_name):
         import locale
         
+        locale.setlocale(locale.LC_MONETARY, '')
+        
+        doc_field = self.document.META.get_doc_field(df_name)
         if doc_field:
             if doc_field.df_type == 'link':
-                return data
-                document = self.META.property('type', 'document')
-                label = self.META.property('type', 'label')
-                row = self.META.db[document](data)
+                return row[df_name]
+                document = self.document.META.property('type', 'document')
+                label = self.document.META.property('type', 'label')
+                row = self.db[document](row[df_name])
                 if row and label in row:
                     return row[label]
+                
             elif doc_field.df_type == 'currency':
-                return locale.currency(data, doc_field.META.property('type', 'symbol'), True, False)
+                return locale.currency(row[df_name], doc_field.META.property('type', 'symbol'), True, False)
             elif doc_field.df_type == 'money':
-                return locale.currency(data, doc_field.META.property('type', 'international'), True, True)
+                return locale.currency(row[df_name], doc_field.META.property('type', 'international'), True, True)
             elif doc_field.df_type == 'filelink':
-                document = self.db.File(data)
+                document = self.db.File(row[df_name])
                 if document and self.document.META.property('allow_file_links'):
                     label = document['title']
                     return A(URL('download', args=document.id), cid=self.request.cid if self.request.ajax else None)
@@ -913,10 +899,8 @@ class ChildTable(ChildModal):
                     return document['title']
             elif doc_field.df_type == 'blob':
                 return 'DATA'
-            elif isinstance(data, (list, tuple, dict)):
-                return 'DATA'
-            return data
-        return data
+            return row[df_name]
+        return row[df_name]
         
     def build_table_body(self):
         from gluon.dal import Row
@@ -938,27 +922,27 @@ class ChildTable(ChildModal):
         for record in records:
             row = []
             for column in self.columns:
-                (tablename, fieldname) = column['rel'].split('.')
-                doc_field = self.document.META.get_doc_field(fieldname)                    
-                if tablename in record \
-                    and isinstance(record, Row) \
-                    and isinstance(record[tablename], Row):
-                    d = record[tablename][fieldname]
-                elif fieldname in record:
-                    d = record[fieldname]
-                else:
-                    raise SyntaxError, 'something wrong in Rows object'
-                self.get_representation(doc_field,  d)
-                row.append(TD(d or '', **{'_data-saved': record['__saved'][0], '_data-idx': record['__saved'][1], '_data-columnname': column['rel']  }))
-            row.insert(0, TD(record.id, _class='hide'))
-            row.insert(1, 
-                TD(
-                   record.id,
-                   A(I(_class='icon-edit'), **{'_data-url': url_edit(record)}),
-                   A(I(_class='icon-remove'), **{'_data-url': url_edit(record)})
+                if column['class'] != 'property':
+                    (tablename, fieldname) = column['rel'].split('.')
+                    doc_field = self.document.META.get_doc_field(fieldname)                    
+                    if tablename in record \
+                        and isinstance(record, Row) \
+                        and isinstance(record[tablename], Row):
+                        r = record[tablename][fieldname]
+                    elif fieldname in record:
+                        r = record[fieldname]
+                    else:
+                        raise SyntaxError, 'something wrong in Rows object'
+                    row.append(TD(r, **{'_data-saved': record['__saved'][0], '_data-idx': record['__saved'][1], '_data-columnname': column['rel']  }))
+                row.insert(0, TD(record.id, _class='hide'))
+                row.insert(1, 
+                    TD(
+                       record.id,
+                       A(I(_class='icon-edit'), _href='javascript:void(0);', **{'_data-url': url_edit(record)}),
+                       A(I(_class='icon-remove'),_href='javascript:void(0);', **{'_data-url': url_edit(record)})
+                    )
                 )
-            )
-            tbody.append(TR(*row, _class='many-childs-row', **{'_data-doc_parent': record.id, }))
+                tbody.append(TR(*row, _class='many-childs-row', **{'_data-doc_parent': record.id, }))
             
         return TBODY(*tbody)
     
@@ -972,33 +956,31 @@ class ChildTable(ChildModal):
             DIV(
                 DIV(
                     SPAN(
-                         
+                         A(
+                           I(_class='icon-plus'),
+                           self.T('Add'),
+                           _href=url_add()
+                        )
                     ),
                     _class='pull-right muted'
                 ),
                 _class='table-head'
             ),
-            DIV(
-                TABLE(*components, _id=self._id, _class='table table-hover table-condensed'),
-                self.build_script_table(), 
-                self.build_modal(),
-                _class='table-content clearfix'
-            )
+            DIV(TABLE(*components, _id=self._id, _class='table table-hover table-condensed'), _class='table-content clearfix')
         )
     
-    def build_script_table(self):
+    def build_script(self):
         script = """
             ;(function($){
-                $('table#%(id)s tbody tr td a').each(function(i){
+                $('table#(id)s tbody tr a').each(function(i){
                     $(this).on('click', function(){
-                        $.get($(this).data('url'), function(data){
-                            $('div#%(id)s .modal-body').html(data);
-                            $('div#%(id)s').modal();
-                        })
-                    });
+                        jQuery.get($(this).data('url'));
+                    })
                 });
-            })(jQuery);
-        """%{'id': self._id}
+            })();
+        """%{
+             'id': self._id
+        }
         if self.request.ajax:
             self.response.js = (self.response.js or '') + script.strip()
             return TAG['']()
@@ -1011,6 +993,15 @@ class ChildTable(ChildModal):
         document = db.get_document(df.property('type', 'document'))
         doc_parent = db.get_document(df.PARENT.doc_name)
         widget = ChildTable(document, doc_parent)
-        return widget.component
+        table = widget.build_table()
+        return TAG['']()
+
+    @property        
+    def cwidget(self):
+        if '__document_child_form_%s'%self.child_name in self.request.vars and self.request.vars['__document_child_form_%s'%self.child_name] == self.document.META.doc_name:
+            if '__action' in self.request.vars and self.request.vars['__action'] in ('form', 'edit'):
+                return ChildModal.cwidget(self)
+            else:
+                return self.build_table()
             
 widgets.childtable = ChildTable

@@ -140,10 +140,16 @@ class LDS(DataBase):
     _documents_and_datamodels = {}
     
     def __init__(self, config):
-        
+        from gluon import Field
         from datamodel.document import Document, DocumentField, Tags, DocumentTag, DocumentComment, File, DocumentFile
                 
         self.config = config
+        #self.config.common_fields.append(
+        #    Field('idx', 'integer', notnull=True, required=True),
+        #    Field('document', 'reference tabDocument', notnull=True, required=True),
+        #   Field('doc_parent', 'reference tabDocument'),
+        #   Field('doc_parent_id', 'integer')
+        #)
         DataBase.__init__(self, config, [])
         self.define_datamodels({'document': Document, 'documentfield': DocumentField, 'tags': Tags, 'documenttag': DocumentTag, 'documentcomment': DocumentComment, 'files': File, 'documentfile': DocumentFile })
     
@@ -227,9 +233,23 @@ class LDS(DataBase):
         adapter = get_adapter(document_name, DocumentData)
         
         document = adapter(meta, **row.as_dict())
-        document.update_document = RecordUpdater(document, self[self.datamodel(document_name)], document.id)
+        document.update_document = RecordUpdater(document, self[document_name], document.id)
         
         return document
+    
+    def get_document_childs(self, childname, doc_parent, doc_parent_id):
+        from gluon.dal import RecordUpdater
+        
+        meta = self.load_document(childname)
+        childs = self((self[childname].document==meta.id)&
+                         (self[childname].doc_parent==doc_parent)&
+                         (self[childname].doc_parent_id==doc_parent_id)).select(self[childname].ALL)
+        
+        adapter = get_adapter(childname, DocumentData)
+        
+        childs = map(lambda x: adapter(meta, **x), childs)                 
+        map(lambda x: (x.__setitem__('__saved', (True, x.id)), x.setattr('update_document', RecordUpdater(x, self[childname], x.id))), childs)
+        return childs
 
     def store_files(self, files):
         stored = []
@@ -247,16 +267,23 @@ class LDS(DataBase):
         
 class DocumentMeta(Row):
     def __init__(self, db, *args, **kwargs):
-        from helpers.properties import PropertyManager
+        from helpers.properties import PropertyManager, PMDocumentField
         self._db = db
         Row.__init__(self, *args, **kwargs)
         
+        self.DOC_FIELDS = self._db((self._db.DocumentField.document == 2)&
+                                   (self._db.DocumentField.doc_parent==self.id)&
+                                   (self._db.DocumentField.doc_parent_id==self.id)).select(self._db.DocumentField.ALL, orderby=self._db.DocumentField.idx) #& (self._db.DocumentField.df_type.belongs(fields.keys()))
+        
+        map(lambda x: (setattr(x, 'PARENT', self), PropertyManager(x, x.df_meta)), self.DOC_FIELDS)
+        
         PropertyManager(self, self.doc_meta)
-        
-        self.CHILDS = self._db(self._db.Document.doc_parent==self.id)
-        self.DOC_FIELDS = self._db((self._db.DocumentField.document == self.id)&(self._db.DocumentField.df_type!='property')).select(self._db.DocumentField.ALL) #& (self._db.DocumentField.df_type.belongs(fields.keys()))
-        
-        map(lambda x, parent=self, proper=PropertyManager: (setattr(x, 'PARENT', parent), PropertyManager(x, x.df_meta)), self.DOC_FIELDS)
+
+    @property
+    def _DOC_FIELDS(self):
+        if not hasattr(self, '__doc_fields'):
+            self.__doc_fields = self._db.get_document_childs('documentfield', self.id, self.id)
+        return self.__doc_fields        
 
     def exist_doc_field(self, df_name):
         return len(filter(lambda x: x.df_name==df_name, self.DOC_FIELDS))>0        
@@ -289,8 +316,6 @@ class DocumentData(Row):
         self.META = meta
         Row.__init__(self, *args, **kwargs)
         self['__saved'] = (True, self['id'])
-        self.COMMENTS = self.META._db((self.META._db.DocumentComment.document==self.META.id)&(self.META._db.DocumentComment.data_id==self.id))
-        self.TAGS = self.META._db((self.META._db.DocumentTag.document==self.META.id)&(self.META._db.DocumentTag.data_id==self.id)&(self.META._db.Tags.id==self.META._db.DocumentTag.tag))        
     
     def save(self):
         if not hasattr(self, 'id'):
@@ -308,6 +333,15 @@ class DocumentData(Row):
     
     def recover_from_trash(self):
         self.update_document(is_active=True)
+        
+    def _property(self, group, name, default=None):
+        if self.has_key('df_default') or self.has_key('doc_default'):
+            if self.has_key('df_default'):
+                defaults = self['df_default'] or self.META.get_doc_field('df_default').df_meta
+        
+class DocFieldLazy(Row):
+    def __init__(self, meta, *args, **kwargs):
+        self.META = meta
 
 class Account(Auth):
     """Auto configured Auth"""

@@ -24,7 +24,7 @@
 			"idx": 4,
 			"df_name": "doc_title",
 			"df_type": "string",
-			"df_label": "Title of Document"
+			"df_label": "Title of Document",
 		},
 		{
 			"idx": 5,
@@ -141,13 +141,12 @@
 			"df_name": "df_meta",
 			"df_type": "property",
 			"df_default": [
-				{"group": "policy", "type": "string", "property": "is_writable", "default": "ALWAYS", "options": ["ON_CREATE", "ON_UPDATE", "ALWAYS", "NEVER"]},
-				{"group": "policy", "type": "string", "property": "is_readable", "default": "ALWAYS", "options": ["ON_CREATE", "ON_UPDATE", "ALWAYS", "NEVER"]},
-				{"group": "policy", "type": "atring", "property": "is_required", "default": "NEVER", "options": ["ON_CREATE", "ON_UPDATE", "ALWAYS", "NEVER"]},
-				{"group": "visibility", "type": "string", "property": "represent"},
+				{"group": "policy", "type": "string", "property": "is_writable", "default": "ALWAYS", "options": ["ON_CREATE", "ALWAYS", "NEVER"]},
+				{"group": "policy", "type": "string", "property": "is_readable", "default": "ALWAYS", "options": ["ON_CREATE", "ALWAYS", "NEVER"]},
+				{"group": "policy", "type": "string", "property": "is_required", "default": "NEVER", "options": ["ON_CREATE", "ALWAYS", "NEVER"]},
+				{"group": "visibility", "type": "string", "property": "represent", "value": null},
 				{"group": "visibility", "type": "boolean", "property": "hide_in_filter", "default": false},
 				{"group": "visibility", "type": "boolean", "property": "hide_in_report", "default": false}, 
-				{"group": "visilibity", "type": "boolean", "property": "hide_in_filter", "default": false}
 			]
 		}
 	]
@@ -168,7 +167,7 @@
             ]
         },
         {
-            "idx": 1,
+            "idx": 2,
             "df_name": "data_id",
             "df_type": "integer",
             "df_meta": [
@@ -176,7 +175,7 @@
             ]
         },
         {
-            "idx": 2,
+            "idx": 3,
             "df_name": "comment",
             "df_type": "text",
             "df_meta": [

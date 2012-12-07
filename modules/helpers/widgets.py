@@ -42,12 +42,14 @@ class FormWidget(object):
         raise NotImplementedError
     
     @classmethod
-    def writable(cls, df):
-        return df.property('policy', 'is_writable')
+    def writable(cls, df, stage):
+        
+        print df.df_name, stage, df.property('policy', 'is_writable'), df.property_metadefault('policy', 'is_writable')
+        return df.property('policy', 'is_writable') in (stage, 'ALWAYS') 
     
     @classmethod
-    def readable(cls, df):
-        return df.property('policy', 'is_readable')
+    def readable(cls, df, stage):
+        return df.property('policy', 'is_readable') in (stage, 'ALWAYS')
     
     @classmethod
     def _attributes(cls, doc_field, widget_attributes, **attributes):
@@ -59,7 +61,10 @@ class FormWidget(object):
         )
         attr.update(widget_attributes)
         attr.update(attributes)
-        if not cls.writable(doc_field):
+        
+        stage = ('ON_CREATE' if not attributes['row']['id'] else 'ALWAYS')
+        
+        if not cls.writable(doc_field, stage):
             attr['_disabled']='disabled'
         return attr
     
@@ -540,6 +545,7 @@ widgets = Storage(
     datetime = Datetime,
     text = Text,
     smalltext = Smalltext,
+    property = Smalltext,
     texteditor = Texteditor,
     rule = Rule,
     boolean = Boolean,
@@ -629,7 +635,7 @@ class Document(DIV):
         while i < len(self.document.META.DOC_FIELDS) and _type != 'sectionbreak':
             doc_field = self.document.META.DOC_FIELDS[i] 
             df_name = doc_field.df_name
-            subwidget = widgets[_type].widget(self.document.META.DOC_FIELDS[i], self.document[df_name] if hasattr(self.document, df_name) else '' )
+            subwidget = widgets[_type].widget(self.document.META.DOC_FIELDS[i], self.document[df_name] if hasattr(self.document, df_name) else '' , row=self.document)
             if doc_field.property('policy', 'visible') == 'NEVER':
                 i += 1
                 continue
@@ -648,7 +654,7 @@ class Document(DIV):
         while i < len(self.document.META.DOC_FIELDS) and _type not in ('sectionbreak', 'columnbreak'):
             doc_field = self.document.META.DOC_FIELDS[i] 
             df_name = doc_field.df_name
-            subwidget = widgets[_type].widget(self.document.META.DOC_FIELDS[i], self.document[df_name] if hasattr(self.document, df_name) else '' )
+            subwidget = widgets[_type].widget(self.document.META.DOC_FIELDS[i], self.document[df_name] if hasattr(self.document, df_name) else '', row=self.document)
             widget.components.append(subwidget)
             if doc_field.property('policy', 'visible') == 'NEVER':
                 i += 1
@@ -667,7 +673,7 @@ class Document(DIV):
             doc_field = self.document.META.DOC_FIELDS[i] 
             _type = doc_field.df_type
             df_name = doc_field.df_name
-            wgt = widgets[_type].widget(self.document.META.DOC_FIELDS[i], self.document[df_name] if hasattr(self.document, df_name) else '' )
+            wgt = widgets[_type].widget(self.document.META.DOC_FIELDS[i], self.document[df_name] if hasattr(self.document, df_name) else '', row=self.document )
             if doc_field.property('policy', 'visible') == 'NEVER':
                 i += 1
                 continue
@@ -845,14 +851,14 @@ class ChildModal(Document, ChildManager):
         }
         if self.request.ajax:
             self.response.js = (self.response.js or '') + script.strip()
-            return TAG['']()
+            return TAG[''](script)
         else:
             return SCRIPT(script.strip())
     
     @property
     def form(self):
         if not self._form:
-            self._form = FORM(self.formstyle_document(), _formname=self._name).process()
+            self._form = FORM(self.formstyle_document(), _formname=self._name, _id=self._id).process()
         return self._form
     
     @classmethod
@@ -885,13 +891,11 @@ class ChildTable(ChildModal):
         return self._cols
     
     def build_table_header(self):
-        def url_add():
-            return ''
-        return THEAD(TR(*[TH(_class='hide'), TH(A(I(_class='icon-plus icon-white'),' ', self.T('Add'), _href=url_add(), _class='btn btn-mini btn-info'))]+[TH(c['label'], _rel=c['rel']) for c in self.columns]))
+        return THEAD(TR(*[TH(A(I(_class='icon-plus icon-white'),' ', self.T('Add'), _href='javascript:void(0)', _class='btn btn-mini btn-info', **{'_data-url': URL(**self.base_url_child_add)}))]+[TH(c['label'], _rel=c['rel']) for c in self.columns]))
 
     def get_representation(self, doc_field, data):
         import locale
-        
+        locale.setlocale(locale.LC_ALL, '')        
         if doc_field:
             if doc_field.df_type == 'link':
                 return data
@@ -911,7 +915,9 @@ class ChildTable(ChildModal):
                     return A(URL('download', args=document.id), cid=self.request.cid if self.request.ajax else None)
                 elif document:
                     return document['title']
-            elif doc_field.df_type == 'blob':
+            elif doc_field.df_type in ('blob', 'property'):
+                return 'DATA'
+            elif doc_field.df_type == 'smalltext' and data and len(data)>255:
                 return 'DATA'
             elif isinstance(data, (list, tuple, dict)):
                 return 'DATA'
@@ -948,12 +954,11 @@ class ChildTable(ChildModal):
                     d = record[fieldname]
                 else:
                     raise SyntaxError, 'something wrong in Rows object'
-                self.get_representation(doc_field,  d)
+                d = self.get_representation(doc_field,  d) if d else ''
                 row.append(TD(d or '', **{'_data-saved': record['__saved'][0], '_data-idx': record['__saved'][1], '_data-columnname': column['rel']  }))
-            row.insert(0, TD(record.id, _class='hide'))
-            row.insert(1, 
+            row.insert(0, 
                 TD(
-                   record.id,
+                   '%06d'%int(record.id),
                    A(I(_class='icon-edit'), **{'_data-url': url_edit(record)}),
                    A(I(_class='icon-remove'), **{'_data-url': url_edit(record)})
                 )
@@ -987,30 +992,66 @@ class ChildTable(ChildModal):
         )
     
     def build_script_table(self):
+        from helpers import ajax_set_files
+        
+        files = []
+        files.append(URL(c='static', f='templates', args=['bootstrap', 'third-party', 'DataTables', 'js', 'jquery.dataTables.min.js']))
+        files.append(URL(c='static', f='templates', args=['bootstrap', 'third-party', 'DataTables', 'extras', 'FixedColumns.min.js']))
+        ajax_set_files(files)
+        
         script = """
             ;(function($){
+                $('table#%(id)s thead tr th a.btn').on('click', function(){
+                    $.get($(this).data('url'), function(data){
+                        $('div#%(id)s .modal-body').html(data);
+                            $('div#%(id)s').modal();
+                    });
+                });
                 $('table#%(id)s tbody tr td a').each(function(i){
                     $(this).on('click', function(){
                         $.get($(this).data('url'), function(data){
                             $('div#%(id)s .modal-body').html(data);
                             $('div#%(id)s').modal();
-                        })
+                        });
                     });
                 });
+                function initTable(){
+                    var oTable = $('table#%(id)s').dataTable({
+                        'sScrollY': '500px',
+                        'sScrollX': '100%%25',
+                        'sScrollXInner': '150%%25',
+                        'bScrollCollapse': true,
+                        'bPaginate': false,
+                        'bFilter': false,
+                        'oLanguage': {
+                            'sInfo': '',
+                            'sInfoFiltered': ''
+                        },
+                        'aoColumnDefs': [
+                            {'bSortable': false, 'sClass': 'index', 'aTargets': [0]}
+                        ],
+                        'aaSorting': [[0, 'asc']]
+                    });
+                }
+                
+                if ($('table#%(id)s').dataTable === undefined) {
+                    setTimeout(initTable, 1500);
+                } else {
+                    initTable();
+                }
+                                
             })(jQuery);
         """%{'id': self._id}
         if self.request.ajax:
-            self.response.js = (self.response.js or '') + script.strip()
+            self.response.js = (self.response.js or '') + script
             return TAG['']()
-        return SCRIPT(script.strip())
-
+        return SCRIPT(script)
 
     @classmethod
     def widget(cls, df, value, **attrs):
         db = df.PARENT._db
         document = db.get_document(df.property('type', 'document'))
-        doc_parent = db.get_document(df.PARENT.doc_name)
-        widget = ChildTable(document, doc_parent)
+        widget = ChildTable(document, attrs.pop('row'))
         return widget.component
             
 widgets.childtable = ChildTable

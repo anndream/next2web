@@ -30,6 +30,7 @@ class ChildManager(BaseManager):
         self._name = '%s_for_%s_on_%s'%(self._part_name, self.child_name, self.doc_parent.META.doc_name)
         
         self.base_url_child = dict(r=self.request, c=self.request.controller, f=self.request.function, args=self.request.args, vars={'__document_child_form_%s'%self.child_name: self.doc_parent.META.doc_name, '__action': 'table'})
+        self.base_url_child_add = dict(r=self.request, c=self.request.controller, f=self.request.function, args=self.request.args, vars={'__document_child_form_%s'%self.child_name: self.doc_parent.META.doc_name, '__action': 'add'})
         self.base_url_child_edit = dict(r=self.request, c=self.request.controller, f=self.request.function, args=self.request.args, vars={'__document_child_form_%s'%self.child_name: self.doc_parent.META.doc_name, '__action': 'edit'})
         self.base_url_child_remove = dict(r=self.request, c=self.request.controller, f=self.request.function, args=self.request.args, vars={'__document_child_form_%s'%self.child_name: self.doc_parent.META.doc_name, '__action': 'remove'})
         self.base_url_child_childs = dict(r=self.request, c=self.request.cotnroller, f=self.request.function, args=self.request.args, vars={'__document_child_form_%s'%self.child_name: self.doc_parent.META.doc_name, '__action': 'childs'})
@@ -47,6 +48,8 @@ class ChildManager(BaseManager):
         if '__document_child_form_%s'%self.child_name in self.request.vars and self.request.vars['__document_child_form_%s'%self.child_name] == self.doc_parent.META.doc_name:
             if '__action' in self.request.vars and self.request.vars['__action'] == 'table':
                 raise HTTP(200, self.build_table().xml())
+            if '__action' in self.request.vars and self.request.vars['__action'] == 'add':
+                raise HTTP(200, self.form)
             if '__action' in self.request.vars and self.request.vars['__action'] == 'edit':
                 self.document = self.get_child(self.request.vars['__saved'], self.request.vars['__idx'])
                 raise HTTP(200, self.form)
@@ -81,9 +84,8 @@ class ChildManager(BaseManager):
         
     def list_childs_in_db(self):
         childs = self.db((self.db[self.child_name].document==self.document.META.id)&
-                         (self.db.Document.doc_parent==self.doc_parent.META.id)&
-                         (self.db[self.child_name].doc_parent_id==self.doc_parent.id)&
-                         (self.db[self.child_name].document==self.db.Document.id)).select(self.db[self.child_name].ALL)
+                         (self.db[self.child_name].doc_parent==self.doc_parent.META.id)&
+                         (self.db[self.child_name].doc_parent_id==self.doc_parent.id)).select(self.db[self.child_name].ALL)
         
         map(lambda x: x.__setitem__('__saved', (True, x.id)), childs)
         

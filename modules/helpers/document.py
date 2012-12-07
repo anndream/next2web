@@ -32,6 +32,7 @@ status = Storage({
     status_in_trash: T('In Trash')
 })
 
+
 types = Storage({
     'string': Storage({
         'native': 'string',

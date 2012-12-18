@@ -30,6 +30,7 @@ class ChildManager(BaseManager):
         self._name = '%s_for_%s_on_%s'%(self._part_name, self.child_name, self.doc_parent.META.doc_name)
         
         self.base_url_child = dict(r=self.request, c=self.request.controller, f=self.request.function, args=self.request.args, vars={'__document_child_form_%s'%self.child_name: self.doc_parent.META.doc_name, '__action': 'table'})
+        self.base_url_form = dict(r=self.request, c=self.request.controller, f=self.request.function, args=self.request.args, vars={'__document_child_form_%s'%self.child_name: self.doc_parent.META.doc_name, '__action': 'form'})
         self.base_url_child_add = dict(r=self.request, c=self.request.controller, f=self.request.function, args=self.request.args, vars={'__document_child_form_%s'%self.child_name: self.doc_parent.META.doc_name, '__action': 'add'})
         self.base_url_child_edit = dict(r=self.request, c=self.request.controller, f=self.request.function, args=self.request.args, vars={'__document_child_form_%s'%self.child_name: self.doc_parent.META.doc_name, '__action': 'edit'})
         self.base_url_child_remove = dict(r=self.request, c=self.request.controller, f=self.request.function, args=self.request.args, vars={'__document_child_form_%s'%self.child_name: self.doc_parent.META.doc_name, '__action': 'remove'})
@@ -84,8 +85,8 @@ class ChildManager(BaseManager):
         
     def list_childs_in_db(self):
         childs = self.db((self.db[self.child_name].document==self.document.META.id)&
-                         (self.db[self.child_name].doc_parent==self.doc_parent.META.id)&
-                         (self.db[self.child_name].doc_parent_id==self.doc_parent.id)).select(self.db[self.child_name].ALL)
+                         (self.db[self.child_name].doc_parent==self.doc_parent.id)&
+                         (self.db[self.child_name].doc_parent_id==self.doc_parent.id)).select(self.db[self.child_name].ALL, cache=(current.cache.ram, 360))
         
         map(lambda x: x.__setitem__('__saved', (True, x.id)), childs)
         

@@ -14,6 +14,51 @@ locale.setlocale(locale.LC_ALL, '')
 if not current.response.message_log:
     current.response.message_log = []
 
+def sucessor(text):
+    import string.lowercase as alphabet
+    
+    result = text
+    
+    rtext = [t for t in text]
+    rtext.reverse()
+    
+    for i, last in enumerate(rtext):
+        next = ''
+        carry = False
+        
+        if last.isalpha():
+            try:
+                index = alphabet.index(last.lower())
+            except ValueError:
+                index = None
+            
+            if index is None:
+                next, carry = last, True
+            else:
+                isupper = last == last.upper()
+                next = alphabet[index+1] % len(text)
+                if isupper: 
+                    next = next.upper()
+                carry = index + 1 > len(text)
+                if carry and i == 0:
+                    added = 'A' if isupper else 'a'
+                    result = added + next + result[1:]
+                    break
+        else:
+            next = int(last) + 1;
+            if next > 9 :
+                next = 0
+                carry = True
+            if carry and i == 0:
+                result = '1' + str(next) + result[1:]
+                break
+        
+        result = result[0:i] + str(next) + result[i+1:]
+        if not carry:
+            break
+        
+    return result
+
 def md5sum(filename):
     if not os.path.exists(filename):
         raise ValueError, 'Unable to open file %s' % `filename`

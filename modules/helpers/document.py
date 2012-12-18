@@ -12,6 +12,10 @@ from gluon.dal import Field
 from gluon.storage import Storage
 from gluon import current, validators
 from gluon.contrib.simplejson import loads
+import re
+
+from datetime import date, datetime
+from time import time, strptime
 
 T = current.T
 
@@ -32,6 +36,63 @@ status = Storage({
     status_in_trash: T('In Trash')
 })
 
+EQ_OPERATOR = ('eq', T('Equals to'), lambda lft, rgt: lft == rgt)
+GT_OPERATOR = ('gt', T('Greather than'), lambda lft, rgt: lft > rgt) 
+LT_OPERATOR = ('lt', T('Less than'), lambda lft, rgt: lft < rgt)
+NE_OPERATOR = ('ne', T('Not equals to'), lambda lft, rgt: lft != rgt)
+GE_OPERATOR = ('ge', T('Greather or equals to'), lambda lft, rgt: lft >= rgt)
+LE_OPERATOR = ('le', T('Less or equals to'), lambda lft, rgt: lft <= rgt)
+
+COMMON_OP = [
+    EQ_OPERATOR,
+    GT_OPERATOR,
+    LT_OPERATOR,
+    NE_OPERATOR,
+    GE_OPERATOR,
+    LE_OPERATOR
+]
+
+STR_OP = [
+    ('contains', T('Contains'), lambda lft, rgt: rgt in lft),
+    ('notcontains', T('Not contains'), lambda lft, rgt: not rgt in lft ),
+    ('startswith', T('Starts with'), lambda lft, rgt: str(lft).startswith(str(rgt))),
+    ('endswith', T('Ends with'), lambda lft, rgt: str(lft).endswith(str(rgt)))
+]
+
+BOOL_OP = [
+    ('is_true', T('Is True'), lambda lft: lft == True),
+    ('is_false', T('Is False'), lambda lft: lft == False)
+]
+
+REGEX_OP = [('match', T('Match'), lambda lft, rgt: not re.match(rgt, lft) is None )]
+
+DATE_OP = (
+    ('eq', T('Equals to'), lambda lft, rgt, strftime="%Y-%m-%d": lft == date(*strptime(rgt, strftime)[:3])),
+    ('gt', T('Greather than'), lambda lft, rgt, strftime="%Y-%m-%d": lft > date(*strptime(rgt, strftime)[:3])),
+    ('lt', T('Less than'), lambda lft, rgt, strftime="%Y-%m-%d": lft < date(*strptime(rgt, strftime)[:3])),
+    ('ne', T('Not equals to'), lambda lft, rgt, strftime="%Y-%m-%d": lft != date(*strptime(rgt, strftime)[:3])),
+    ('ge', T('Greather or equals to'), lambda lft, rgt, strftime="%Y-%m-%d": lft >= date(*strptime(rgt, strftime)[:3])),
+    ('le', T('Less or equals to'), lambda lft, rgt, strftime="%Y-%m-%d": lft <= date(*strptime(rgt, strftime)[:3]))
+)
+
+TIME_OP = (
+    ('eq', T('Equals to'), lambda lft, rgt, strftime="%H:%M:%s": lft == time(*strptime(rgt, strptime)[-4: -1])),
+    ('gt', T('Greather than'), lambda lft, rgt, strftime="%H:%M:%s": lft > time(*strptime(rgt, strptime)[-4: -1])),
+    ('lt', T('Greather than'), lambda lft, rgt, strftime="%H:%M:%s": lft < time(*strptime(rgt, strptime)[-4: -1])),
+    ('ne', T('Not equals to'), lambda lft, rgt, strftime="%H:%M:%s": lft != time(*strptime(rgt, strptime)[-4: -1])),
+    ('ge', T('Greather or equals to'), lambda lft, rgt, strftime="%H:%M:%s": lft >= time(*strptime(rgt, strptime)[-4: -1])),
+    ('le', T('Less or equals to'), lambda lft, rgt, strftime="%H:%M:%s": lft <= time(*strptime(rgt, strptime)[-4: -1]))
+)
+
+DATETIME_OP = (
+    ('eq', T('Equals to'), lambda lft, rgt, strftime="%Y-%m-%d %H:%M:%s": lft == datetime(*strptime(rgt, strftime))),
+    ('gt', T('Greather than'), lambda lft, rgt, strftime="%Y-%m-%d %H:%M:%s": lft > datetime(*strptime(rgt, strftime))),
+    ('lt', T('Less than'), lambda lft, rgt, strftime="%Y-%m-%d %H:%M:%s": lft < datetime(*strptime(rgt, strftime))),
+    ('ne', T('Not equals to'), lambda lft, rgt, strftime="%Y-%m-%d %H:%M:%s": lft != datetime(*strptime(rgt, strftime))),
+    ('ge', T('Greather or equals to'), lambda lft, rgt, strftime="%Y-%m-%d %H:%M:%s": lft >= datetime(*strptime(rgt, strftime))),
+    ('le', T('Less or equals to'), lambda lft, rgt, strftime="%Y-%m-%d %H:%M:%s": lft <= datetime(*strptime(rgt, strftime)))
+)
+
 
 types = Storage({
     'string': Storage({
@@ -41,7 +102,8 @@ types = Storage({
         'options': [
             Field('minsize', 'integer', notnull=True, default=None, label=T('Min Size')),
             Field('maxsize', 'integer', notnull=True, default=None, label=T('Max Size'))
-        ]
+        ],
+        'operators': COMMON_OP + STR_OP
     }),
     'email': Storage({
         'native': 'string',
@@ -49,7 +111,8 @@ types = Storage({
         'label': T('Email'),
         'options': [
             Field('validate', 'boolean', default=True, label=T('Validate?'))
-        ]
+        ],
+        'operators': STR_OP
     }),
     'url': Storage({
         'native': 'string',
@@ -57,7 +120,8 @@ types = Storage({
         'label': T('Url'),
         'options': [
             Field('validate', 'boolean', default=True, label=T('Validate?'))
-        ]
+        ],
+        'operators': STR_OP
     }),
     'phone': Storage({
         'native': 'string',
@@ -65,7 +129,8 @@ types = Storage({
         'label': T('Phone'),
         'options': [
             Field('mask', 'boolean', default=True, label=T('Mask')),
-        ]
+        ],
+        'operators': STR_OP
     }),
     'text': Storage({
         'native': 'text',
@@ -74,7 +139,8 @@ types = Storage({
         'options': [
             Field('minsize', 'integer', notnull=True, default=None, label=T('Min Size')),
             Field('maxsize', 'integer', notnull=True, default=None, label=T('Max Size'))
-        ]
+        ],
+        'operators': STR_OP[:2]
     }),
     'smalltext': Storage({
         'native': 'string',
@@ -84,26 +150,30 @@ types = Storage({
             Field('minsize', 'integer', notnull=True, default=None, label=T('Min Size')),
             Field('maxsize', 'integer', notnull=True, default=None, label=T('Max Size'))
         ],
+        'operators': STR_OP[:2]
     }),
     'texteditor': Storage({
         'native': 'text',
         '_class': 'texteditor',
         'label': T('Text Editor'),
+        'operators': STR_OP[:2]
     }),
     'rule': Storage({
         'native': 'text',
         '_class': 'rule',
         'label': T('Rule'),
+        'operators': STR_OP[:2]
     }),
     'property': Storage({
         'native': 'text',
         '_class': 'property',
-        'label': T('Property')
+        'label': T('Property'),
     }),
     'boolean': Storage({
         'native': 'boolean',
         '_class': 'boolean',
         'label': T('Yes/No'),
+        'operators': BOOL_OP
     }),
     'blob': Storage({
         'native': 'blob',
@@ -117,7 +187,8 @@ types = Storage({
         'options': [
             Field('minimun', 'integer', default=None, label=T('Minimun')),
             Field('maximun', 'integer', default=None, label=T('Maximun'))
-        ]
+        ],
+        'operators': COMMON_OP
     }),
     'double': Storage({
         'native': 'double',
@@ -127,7 +198,8 @@ types = Storage({
             Field('minimun', 'integer', default=None, label=T('Minimun')),
             Field('maximun', 'integer', default=None, label=T('Maximun')),
             Field('dot', 'string', default='.', label=T('Dot'))
-        ]
+        ],
+        'operators': COMMON_OP
     }),
     'decimal': Storage({
         'native': 'decimal',
@@ -140,6 +212,7 @@ types = Storage({
             Field('maximun', 'integer', default=None, label=T('Maximun')),
             Field('dot', 'string', default='.', label=T('Dot'))
         ],
+        'operators': COMMON_OP
     }),
     'currency': Storage({
         'native': 'double',
@@ -155,6 +228,7 @@ types = Storage({
             Field('minimun', 'integer', default=None, label=T('Minimun')),
             Field('maximun', 'integer', default=None, label=T('Maximun')),
         ],
+        'operators': COMMON_OP
     }),
     'date': Storage({
         'native': 'date',
@@ -165,6 +239,7 @@ types = Storage({
             Field('minimun', 'string', default='1900-01-01', label=T('Minimun')),
             Field('maximun', 'string', default=None, label=T('Maximun'))
         ],
+        'operators': DATE_OP,
     }),
     'time': Storage({
         'native': 'time',
@@ -175,6 +250,7 @@ types = Storage({
             Field('minimun', 'string', default='1900-01-01', label=T('Minimun')),
             Field('maximun', 'string', default=None, label=T('Maximun'))
         ],
+        'operators': TIME_OP,
     }),
     'datetime': Storage({
         'native': 'datetime',
@@ -185,6 +261,7 @@ types = Storage({
             Field('minimun', 'string', default='1900-01-01', label=T('Minimun')),
             Field('maximun', 'string', default=None, label=T('Maximun'))
         ],
+        'operators': DATETIME_OP
     }),
     'password': Storage({
         'native': 'password',
@@ -192,7 +269,8 @@ types = Storage({
         'label': T('Password'),
         'options': [
             Field('enforce_safety', 'boolean', default=False, label=T("Enforce Safety"))
-        ]
+        ],
+        'operators': []
     }),
     'filelink': Storage({
         'native': 'upload',
@@ -201,6 +279,7 @@ types = Storage({
         'options': [
             Field('multiple', 'boolean', default=False, label=T('Allow Multiple Files?'))
         ],
+        'operators': []
     }),
     'link': Storage({
         'native': 'reference',
@@ -286,6 +365,33 @@ vtypes = Storage({
        'label': T('Button'),
     }),
 })
+
+DOC_FIELD_META_DEFAULTS = [
+    {"default": "ALWAYS", "type": "string", "property": "is_writable", "group": "policy", "options": ["ON_CREATE", "ON_UPDATE", "ALWAYS", "NEVER"]}, 
+    {"default": "ALWAYS", "type": "string", "property": "is_readable", "group": "policy", "options": ["ON_CREATE", "ON_UPDATE", "ALWAYS", "NEVER"]}, 
+    {"default": "NEVER", "type": "atring", "property": "is_required", "group": "policy", "options": ["ON_CREATE", "ON_UPDATE", "ALWAYS", "NEVER"]}, 
+    {"type": "string", "property": "represent", "group": "visibility"}, 
+    {"default": False, "type": "boolean", "property": "hide_in_filter", "group": "visibility"}, 
+    {"default": False, "type": "boolean", "property": "hide_in_report", "group": "visibility"}, 
+    {"default": False, "type": "boolean", "property": "hide_in_filter", "group": "visilibity"}
+]
+
+DOCUMENT_META_DEFAULTS = [
+    {"default": True, "type": "boolean", "property": "allow_create", "group": "policy"}, 
+    {"default": True, "type": "boolean", "property": "allow_list", "group": "policy"}, 
+    {"default": True, "type": "boolean", "property": "allow_print", "group": "policy"}, 
+    {"default": True, "type": "boolean", "property": "allow_send", "group": "policy"}, 
+    {"default": True, "type": "boolean", "property": "allow_trash", "group": "policy"}, 
+    {"default": True, "type": "boolean", "property": "allow_assignment", "group": "functionality"}, 
+    {"default": True, "type": "boolean", "property": "allow_tagging", "group": "functionality"}, 
+    {"default": True, "type": "boolean", "property": "allow_attachments", "group": "functionality"}, 
+    {"default": True, "type": "boolean", "property": "allow_comments", "group": "functionality"}, 
+    {"type": "list:string", "property": "search_fields", "group": "functionality"}, 
+    {"default": 0, "type": "integer", "property": "level", "group": "security"}, 
+    {"default": 0, "type": "integer", "property": "version", "group": "info"}, 
+    {"type": "readonly", "property": "data_hash", "group": "info"}, 
+    {"type": "readonly", "property": "definition_hash", "group": "info"}
+]
 
 #TODO 1: Implementar uma rotina de atualização para cada registro.
 

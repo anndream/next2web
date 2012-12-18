@@ -18,6 +18,7 @@ from helpers.manager import ChildManager
 T = current.T
 
 pretty = lambda s: s.replace('default', str(T('Home'))).replace('_', ' ').capitalize()
+get_default = lambda opts, name: filter(lambda opt: opt.name==name, opts)[0].default
 
 class FormWidget(object):
     _class= 'generic-widget'
@@ -32,10 +33,11 @@ class FormWidget(object):
         req = []
         if cls.isrequired(df):
             req.append(validators.IS_NOT_EMPTY())
+        return req
     
     @classmethod
     def label(cls, df):
-        return LABEL('%s%s'%(df.df_label, SPAN('*', _style='color:red;') if cls.isrequired(df) else '' ), _for = df.df_name) if df.df_label else TAG['']()
+        return LABEL('%s'%(df.df_label), SPAN(' *', _style='color:#d00;font-weight:bold;') if cls.isrequired(df) else '' , _for = df.df_name) if df.df_label else TAG['']()
     
     @classmethod
     def control(cls, df, value, **attrs):
@@ -43,8 +45,7 @@ class FormWidget(object):
     
     @classmethod
     def writable(cls, df, stage):
-        
-        print df.df_name, stage, df.property('policy', 'is_writable'), df.property_metadefault('policy', 'is_writable')
+        #print df.df_name, stage, df.property('policy', 'is_writable')
         return df.property('policy', 'is_writable') in (stage, 'ALWAYS') 
     
     @classmethod
@@ -96,41 +97,153 @@ class String(FormWidget):
 class Integer(String):
     _class = types.integer._class
     
+    @classmethod
+    def requires(cls, df):
+        req = String.requires(df)
+        minimun = df.property('type', 'minimun')
+        maximun = df.property('type', 'maximun')
+        
+        if minimun and maximun:
+            req.append(validators.IS_INT_IN_RANGE(minimun = minimun, maximun = maximun))
+        elif minimun:
+            req.append(validators.IS_INT_IN_RANGE(minimun = minimun))
+        elif maximun:
+            req.append(validators.IS_INT_IN_RANGE(maximun = maximun))
+            
+        return req
+        
 class Double(String):
     _class = types.double._class
     
-class Decimal(String):
+    @classmethod
+    def requires(cls, df):
+        req = String.requires(df)
+        minimun = df.property('type', 'minimun')
+        maximun = df.property('type', 'maximun')
+        dot = df.property('type', 'dot') or '.'
+        
+        if minimun and maximun:
+            req.append(validators.IS_FLOAT_IN_RANGE(minimun = minimun, maximun = maximun, dot = dot))
+        elif minimun:
+            req.append(validators.IS_FLOAT_IN_RANGE(minimun =  minimun, dot = dot))
+        elif maximun:
+            req.append(validators.IS_FLOAT_IN_RANGE(maximun = maximun, dot = dot))
+        
+        return req
+    
+class Decimal(Double):
     _class = types.decimal._class
     
 class Date(String):
     _class = types.date._class
-    prepend = SPAN(I(_class='icon-calendar'), _class='add-on'),
+    prepend = SPAN(I(_class='icon-calendar'), _class='add-on')
     
-    @staticmethod
+    @classmethod
+    def requires(cls, df):
+        req = String.requires(df)        
+        maximun = df.property('type', 'maximun')
+        minimun = df.property('type', 'minimun')
+        format = df.property('type', 'format')
+        
+        if maximun and minimun:
+            req.append(validators.IS_DATE_IN_RANGE(minimun = minimun, maximun = maximun, format=format))
+        elif minimun:
+            req.append(validators.IS_DATE_IN_RANGE(minimun = minimun, format = format))
+        elif maximun:
+            req.append(validators.IS_DATE_IN_RANGE(maximun = maximun, format=format))
+        else:
+            req.append(validators.IS_DATE(format=format))
+    
+        return req
+    
+    @classmethod
     def control(cls, df, value, **attributes):
-        widget = String.control( df, value, **attributes)
-        _class = 'input-prepent %s-control'%df.df_type
+        
+        default = {'value': value}
+        
+        attrs = cls._attributes(df, default, **attributes)
+        attrs['_data-strftime'] = df.property('type', 'format') or get_default(types[cls._class].options, 'format') 
+        
+        widget = INPUT(**attrs)
+        _class = 'input-prepend %s-control'%df.df_type
         return DIV(cls.prepend, widget, _class=_class)
     
 class Time(Date):
     _class = types.time._class
     prepend = SPAN(I(_class='icon-time'), _class='add-on')
     
-class Datetime(Date):
+    @classmethod
+    def requires(cls, df):
+        req = String.requires(df)
+        maximun = df.property('type', 'maximun')
+        minimun = df.property('type', 'maximun')
+        format = df.property('type', 'format')
+        
+        if maximun and minimun:
+            req.append(validators.IS_DATETIME_IN_RANGE(minimun=minimun, maximun=maximun, format=format))
+        elif minimun:
+            req.append(validators.IS_DATETIME_IN_RANGE(minimun=minimun, format=format))
+        elif maximun:
+            req.append(validators.IS_DATETIME_IN_RANGE(maximun=maximun, format=format))
+        else:
+            req.append(validators.IS_DATETIME(format=format))
+        
+        return req
+        
+    
+class Datetime(Time):
     _class = types.datetime._class
     prepend = SPAN(I(_class='icon-calendar'), _class='add-on')
     
-class Currency(Date):
+class Currency(String):
     _class = types.currency._class
     prepend = SPAN(T('$'), _class='add-on')
+    
+    @classmethod
+    def control(cls, df, value, **attributes):        
+        symbol = df.property('type', 'symbol') or get_default(types.currency.options, 'symbol')
+        decimalDigits = df.property('type', 'decimalDigits') or get_default(types.currency.options, 'decimalDigits')
+        decimalSeparator = df.property('type', 'decimalSeparator') or get_default(types.currency.options, 'decimalSeparator')
+        thousandDigits = df.property('type', 'thousandDigits') or get_default(types.currency.options, 'thousandDigits')
+        thousandSeparator = df.property('type', 'thousandSeparator') or get_default(types.currency.options, 'thousandSeparator')
+        
+        attrs = cls._attributes(df, {'value': value}, **attributes)
+        
+        attrs['_data-fmt_symbol'] = symbol
+        attrs['_data-fmt_decdig'] = decimalDigits
+        attrs['_data-fmt_decsep'] = decimalSeparator
+        attrs['_data-fmt_thodig'] = thousandDigits
+        attrs['_data-fmt-thosep'] = thousandSeparator  
+        
+        widget = INPUT(**attrs)
+        _class = 'input-prepend %s-control'%df.df_type
+        return DIV(cls.prepend, widget, _class=_class)
     
 class Url(Date):
     _class = types.email._class
     prepend = SPAN(I(_class='icon-globe'), 'add-on')
     
+    @classmethod
+    def requires(cls, df):
+        req = String.requires(df)
+        
+        validate = df.property('type', 'validate')
+        if validate:
+            req.append(validators.IS_URL())
+            
+        return req
+    
 class Email(Date):
     _class = types.email._class
     prepend = SPAN(I(_class='icon-envelope'), _class='add-on')
+    
+    @classmethod
+    def requires(cls, df):
+        req = String.requires(df)
+        validate = df.property('type', 'validate')
+        if validate:
+            req.append(validators.IS_EMAIL())
+        return req
     
 class Phone(Date):
     _class = types.phone._class
@@ -142,9 +255,6 @@ class Text(FormWidget):
     
     @classmethod
     def control(cls, df, value, **attrs):
-        #data = df_type.dump()['data']
-        #if data:
-        #    attrs['_data-type'] = `data`
         attrs = cls._attributes(df, {'value': value}, **attrs)
         return TEXTAREA(**attrs) 
     
@@ -163,15 +273,38 @@ class Boolean(String):
 class Select(FormWidget):
     _class = types.select._class
     
-    @staticmethod
-    def has_options(df):
-        return df.has_options()
+    @classmethod
+    def requires(cls, df):
+        req = []
+        if not cls.isrequired(df):
+            req.append(validators.IS_EMPTY_OR(validators.IS_IN_SET(cls.get_options(df))))
+        else:
+            req.append(validators.IS_IN_SET(cls.get_options(df)))
+        return req
+    
+    @classmethod
+    def has_options(cls, df):
+        return df.df_default and len(df.df_default or [])>0
+
+    @classmethod
+    def get_options(cls, df):
+        return df.df_default
         
     @classmethod
-    def widget(cls, df, value, **attrs):
-                
-        return FormWidget(df.field, value, **attrs)
+    def control(cls, df, value, **attrs):
+        
+        default = {"value": value, '_class':cls._class}
+        attr = cls._attributes(df, default, **attrs)
+        
+        if cls.has_options(df):
+            options = cls.get_options(df)
+        else:
+            raise SyntaxError, 'widget Select cannot determine options of %s'%df.df_name
 
+        opts = [OPTION(k.values()[0], _value=k.keys()[0]) for k in options]
+                
+        return SELECT(*opts, **attr)
+    
 class MultipleSelect(Select):
     
     @classmethod
@@ -268,8 +401,9 @@ class Link(object):
         req = []
         if self.doc_field.property('policy', 'is_required') == 'ALWAYS':
             req.append(validators.IS_NOT_EMPTY())
+            req.append(validators.IS_IN_DB(self.db, 'tabDocument.id', '%(' + self.doc_field.property('type', 'label') + ')s'))
         if self.doc_field.property('type', 'document'):
-            req.append(validators.IS_IN_DB(self.db, 'tabDocument.id', '%(' + self.doc_field.property('type', 'label') + ')s'))            
+            req.append(validators.IS_EMPTY_OR(validators.IS_IN_DB(self.db, 'tabDocument.id', '%(' + self.doc_field.property('type', 'label') + ')s')))            
         return req
             
     @staticmethod
@@ -600,7 +734,7 @@ class Document(DIV):
         self.request = current.request
         self.session = current.session
     
-        self.document = document
+        self.document = document        
         self.db = self.document.META._db
         
         self.storage = storage.session(prefix=document.META.doc_name + '_' + (str(self.document.id) or 'new'))
@@ -638,7 +772,7 @@ class Document(DIV):
             subwidget = widgets[_type].widget(self.document.META.DOC_FIELDS[i], self.document[df_name] if hasattr(self.document, df_name) else '' , row=self.document)
             if doc_field.property('policy', 'visible') == 'NEVER':
                 i += 1
-                continue
+                continue    
             elif _type == 'columnbreak':
                 subwidget, i = self._column_break(subwidget, i+1)
             widget.components.append(subwidget)
@@ -669,6 +803,7 @@ class Document(DIV):
     def formstyle_document(self):        
         i = 0
         element = TAG['']()
+        
         while i < len(self.document.META.DOC_FIELDS):
             doc_field = self.document.META.DOC_FIELDS[i] 
             _type = doc_field.df_type
@@ -690,7 +825,7 @@ class Document(DIV):
             else:
                 element.components.append(wgt)  
             i += 1
-            
+        
         return element        
                 
     def build_actions(self):
@@ -851,14 +986,15 @@ class ChildModal(Document, ChildManager):
         }
         if self.request.ajax:
             self.response.js = (self.response.js or '') + script.strip()
-            return TAG[''](script)
+            return TAG['']()
         else:
             return SCRIPT(script.strip())
     
     @property
     def form(self):
         if not self._form:
-            self._form = FORM(self.formstyle_document(), _formname=self._name, _id=self._id).process()
+            
+            self._form = FORM(self.formstyle_document(), _formname=self._name, _id=self._id, _action=URL(**self.base_url_form)).process()
         return self._form
     
     @classmethod
@@ -882,7 +1018,10 @@ class ChildTable(ChildModal):
             cols = self.document.META.property('type', 'columns')
             columns = []
             if not cols:
-                columns = [{'rel': '%s.%s'%(self.document.META.doc_tablename, df.df_name), 'label': df.df_label, 'class': df.df_type} for df in self.document.META.DOC_FIELDS if (df.df_type in types.keys() and df.property("policy", "is_readable")!="NEVER")]
+                columns = [
+                           {'rel': '%s.%s'%(self.document.META.doc_tablename, df.df_name), 
+                            'label': df.df_label, 'class': df.df_type,
+                            'style': '' if df.property("policy", "is_readable")!="NEVER" else 'hide' } for df in self.document.META.DOC_FIELDS if df.df_type in types.keys()]
             else:
                 for col in cols:
                     df = self.document.META.get_doc_field(col)
@@ -891,7 +1030,7 @@ class ChildTable(ChildModal):
         return self._cols
     
     def build_table_header(self):
-        return THEAD(TR(*[TH(A(I(_class='icon-plus icon-white'),' ', self.T('Add'), _href='javascript:void(0)', _class='btn btn-mini btn-info', **{'_data-url': URL(**self.base_url_child_add)}))]+[TH(c['label'], _rel=c['rel']) for c in self.columns]))
+        return THEAD(TR(*[TH(A(I(_class='icon-plus icon-white'),' ', self.T('Add'), _href='javascript:void(0)', _class='btn btn-mini btn-info', **{'_data-url': URL(**self.base_url_child_add)}))]+[TH(c['label'], _rel=c['rel'], _class=c['style']) for c in self.columns]))
 
     def get_representation(self, doc_field, data):
         import locale
@@ -905,9 +1044,9 @@ class ChildTable(ChildModal):
                 if row and label in row:
                     return row[label]
             elif doc_field.df_type == 'currency':
-                return locale.currency(data, doc_field.META.property('type', 'symbol'), True, False)
+                return locale.currency(data, doc_field.property('type', 'symbol') or get_default(types.currency.options, 'symbol'), True, False)
             elif doc_field.df_type == 'money':
-                return locale.currency(data, doc_field.META.property('type', 'international'), True, True)
+                return locale.currency(data, doc_field.property('type', 'international') or get_default(types.currency.options, 'symbol'), True, True)
             elif doc_field.df_type == 'filelink':
                 document = self.db.File(data)
                 if document and self.document.META.property('allow_file_links'):
@@ -955,7 +1094,7 @@ class ChildTable(ChildModal):
                 else:
                     raise SyntaxError, 'something wrong in Rows object'
                 d = self.get_representation(doc_field,  d) if d else ''
-                row.append(TD(d or '', **{'_data-saved': record['__saved'][0], '_data-idx': record['__saved'][1], '_data-columnname': column['rel']  }))
+                row.append(TD(d or '', **{'_data-saved': record['__saved'][0], '_data-idx': record['__saved'][1], '_data-columnname': column['rel'], '_class': column['style']  }))
             row.insert(0, 
                 TD(
                    '%06d'%int(record.id),

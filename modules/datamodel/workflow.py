@@ -12,6 +12,7 @@ Created on 17/10/2012
 from gluon.dal import Field
 from basemodel import BaseModel
 from gluon import current
+from gluon.validators import *
 from gluon.storage import Storage
 
 T = current
@@ -97,5 +98,69 @@ class Transition(BaseModel):
         self.fields = [
             Field('workflow', 'reference tabWorkflow'),
             Field('name', 'string', length=128),
-            Field('from_state', 'string')
+            Field('from_state', 'string'),
+            Field('roles', 'list:reference tabWorkflowRoles')
+        ]
+        
+class EventType(BaseModel):
+    tablename = 'tabWorkflowEventType'
+    def set_properties(self):
+        self.fields = [
+            Field('name', 'string', notnull=True, required=True),
+            Field('description', 'text', lenght=255)
+        ]
+        
+class Event(BaseModel):
+    tablename = 'tabWorkflowEvent'
+    def set_properties(self):
+        self.fields = [
+            Field('name', 'string', notnull=True, required=True),
+            Field('description', 'text'),
+            Field('workflow', 'reference tabWorkflow', required=True, notnull=True),
+            Field('state', 'reference tabWorkflowEvent', required=True, notnull=True),
+            Field('roles', 'list:reference tabWorkflowRole'),
+            Field('event_types', 'list:reference tabWorkflowEventType'),
+            Field('is_mandatory', 'boolean', default=False),
+        ]
+
+class WorkflowActivity(BaseModel):
+    tablename = 'tabWorkflowActivity'
+    def set_properties(self):
+        self.fields = [
+            Field('workflow', 'reference tabWorkflow'),
+            Field('completed_on', 'datetime')
+        ]
+        
+class Participant(BaseModel):
+    tablename = 'tabWorkflowParticipant'
+    def set_properties(self):
+        self.fields = [
+            Field('user', 'reference auth_user', notnull=True, required=True),
+            Field('roles', 'list:reference tabWorkflowRole'),
+            Field('disabled', 'boolean', default=False)
+        ]
+
+class WorkflowHistory(BaseModel):
+    tablename = 'tabWorkflowHistory'
+    TRANSITION = 1
+    EVENT = 2
+    ROLE = 3
+    COMMENT = 4
+    
+    TYPE_ROLE_LIST = (
+            (TRANSITION, T('Transition')),
+            (EVENT, T('Event')),
+            (ROLE, T('Role')),
+            (COMMENT, T('Comment'))
+            )
+    
+    def set_properties(self):
+        self.fields = [
+            Field('worflowactivity', 'reference tabWorkflowActivity'),
+            Field('log_type', 'integer', notnull=True, required=True, requires=IS_IN_SET(self.TYPE_ROLE_LIST)),
+            Field('state', 'reference tabWorkflowState', required=True, notnull=True),
+            Field('transition', 'reference tabWorkflowTransition', required=True, notnull=True),
+            Field('event', 'reference tabWorkflowTransition', required=True, notnull=True),
+            Field('participant', 'reference tabWorkflowParticipant', required=True, notnull=True),
+            
         ]

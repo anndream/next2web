@@ -8,7 +8,6 @@ Created on 02/10/2012
 import os
 
 from handlers.base import Base
-from gluon.storage import Storage
 from helpers.widgets import DocumentPage
 
 from core import Core
@@ -19,12 +18,12 @@ class Document(Base):
         self.db = self.core.db()
         self.auth = self.context.auth = self.core.auth
         self.session = self.core.session
-        self.db._check_update('document', 'designer')
+        #self.db._check_update('document', 'designer')
         
     def get(self):
         self.context.document = self.db.get_document(*self.request.args[:2])
         if len(self.request.args)>1 and not self.session.document[self.request.args[1]]:
-            self.session.document[self.request.args[1]] = Storage()
+            self.session.document[self.request.args[1]] = {}
              
     def add(self):
         self.get()

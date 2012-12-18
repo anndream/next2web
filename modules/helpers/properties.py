@@ -9,19 +9,20 @@ Created on 14/11/2012
 from gluon.storage import Storage
 
 class PropertyManager(object):
-    def __init__(self, df, data):
+    def __init__(self, df, data, default):
         self._data = data or []
+        self._defaults = default or []
         #self._defaults = (df.df_default if hasattr(df, 'df_default') else (df.doc_default if hasattr(df, 'doc_default') else [] )) or []
                 
-        if hasattr(df, 'exist_doc_field'):
-            if df.exist_doc_field('doc_meta'):
-                self._defaults =  df.get_doc_field('doc_meta').df_default or []
-            elif df.exist_doc_field('df_meta'):
-                self._defaults = df.get_doc_field('df_meta').df_default or []
-        elif hasattr(df, 'doc_meta'):
-            self._defaults = df['doc_meta'] or (getattr(df, 'PARENT').get_doc_field('doc_meta').df_meta if getattr(df, 'PARENT').exist_doc_field('doc_meta') else [])
-        elif hasattr(df, 'df_meta'):
-            self._defaults = df['df_meta'] or (getattr(df, 'PARENT').get_doc_field('df_meta').df_meta if getattr(df, 'PARENT').exist_doc_field('df_meta') else [])
+        #if hasattr(df, 'exist_doc_field'):
+        #    if df.exist_doc_field('doc_meta'):
+        #        self._defaults =  df.get_doc_field('doc_meta').df_default or []
+        #    elif df.exist_doc_field('df_meta'):
+        #        self._defaults = df.get_doc_field('df_meta').df_default or []
+        #elif hasattr(df, 'doc_meta'):
+        #    self._defaults = df['doc_meta'] or (getattr(df, 'PARENT').get_doc_field('doc_meta').df_meta if getattr(df, 'PARENT').exist_doc_field('doc_meta') else [])
+        #elif hasattr(df, 'df_meta'):
+        #    self._defaults = df['df_meta'] or (getattr(df, 'PARENT').get_doc_field('df_meta').df_meta if getattr(df, 'PARENT').exist_doc_field('df_meta') else [])
         
         self._build_data()
         self._build_default()
@@ -30,9 +31,10 @@ class PropertyManager(object):
         df.properties = self.properties
         df.property = self.property
         df.update_property = self.property_updater
-        df.property_metatype = self.property_type
-        df.property_metadefault = self.property_default 
-        df.property_raw_data = (self._data, self._defaults) 
+        df.property_merger = self._merge
+        df.property_raw_data = (self._data, self._defaults)
+        self._build_data(), self._build_default()
+        df.property_parsed = (self.data, self.default)
     
     def property_getter(self):
         return self._data
@@ -64,26 +66,44 @@ class PropertyManager(object):
         for prop in self._defaults:
             if not self.default[prop['group']]:
                 self.default[prop['group']] = Storage() 
-                self.default[prop['group']][prop['property']] = prop.get('default', None)
+            self.default[prop['group']][prop['property']] = prop.get('default', None)
                         
     def _merge(self, lft, rgt):
         new_props = Storage()
         for prop in lft.keys():
-            if not rgt.has_key(prop):
+            if not new_props.has_key(prop):
                 if not isinstance(lft[prop], Storage):
-                    new_props[prop if prop != 'default' else 'value'] = lft[prop]
+                    new_props[prop] = lft[prop]
                 else:
                     new_props[prop] = self._merge(lft[prop], Storage())
             elif not isinstance(rgt[prop], Storage):
                 new_props[prop] = rgt[prop] or lft[prop]
-            else:
-                new_props[prop] = self._merge(rgt[prop])
+            #else:
+            #    new_props[prop] = self._merge(rgt[prop])
+        for prop in rgt.keys():
+            if not new_props.has_key(prop):
+                if not isinstance(rgt[prop], Storage):
+                    new_props[prop] = rgt[prop]
+                else:
+                    new_props[prop] = self._merge(rgt[prop], {})
         return new_props
     
     def properties(self, group, default={}):
         return self._merge(self.data.get(group, Storage()), self.default.get(group, Storage())) or Storage()
         
-    def property(self, group, name, value=None):            
+    def property(self, group, name, value=None):
+        #if self.data.has_key(group):
+        #    if self.data[group].has_key(name):
+        #        return self.data[group][name]
+        #    elif value:
+        #       return value
+        #if self.default.has_key(group):
+        #   if self.default[group].has_key(name):
+        #        return self.default[group][name]
+        #    elif value:
+        #        return value
+        #elif value:
+        #   return value
         prop_group = self.properties(group)
         prop = prop_group.get(name, value)
         if prop and value:

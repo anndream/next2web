@@ -20,6 +20,7 @@ from helpers.field import fields
 from datamodel.user import User
 from gluon.storage import Storage
 from gluon import current
+from gluon.cache import Cache
 
 adapters = Storage()
 
@@ -36,6 +37,8 @@ def get_adapter(doc_name, default=None):
     elif default:
         return default
     raise AdapterNotFound(doc_name)
+
+cache = current.cache
 
 class Core(object):
     def __init__(self):
@@ -212,10 +215,10 @@ class LDS(DataBase):
     def list_documents(self):
         return self().select(self.Document.ALL)
     
-    def load_document(self, document_name):        
+    def load_document(self, document_name, data_id):        
         from gluon.dal import RecordUpdater, RecordDeleter
-        row = self(self.Document.doc_name == document_name.lower()).select(self.Document.ALL).first() or Row({'id':None})
-        meta = DocumentMeta(self, **row.as_dict())
+        row = self(self.Document.doc_name == document_name.lower()).select(self.Document.ALL, cache=(cache.ram, 360)).first() or Row({'id':None})
+        meta = DocumentMeta(self, data_id, **row.as_dict())
         
         if getattr(meta, "doc_istable", False):
             self.define_datamodels([{document_name:meta.datamodel()}])
@@ -227,7 +230,7 @@ class LDS(DataBase):
     def get_document(self, document_name, data_id=None):
         from gluon.dal import RecordUpdater
         
-        meta = self.load_document(document_name)
+        meta = self.load_document(document_name, data_id)
         row = self[document_name][data_id] if data_id else Row({'id':None})
                     
         adapter = get_adapter(document_name, DocumentData)
@@ -240,7 +243,7 @@ class LDS(DataBase):
     def get_document_childs(self, childname, doc_parent, doc_parent_id):
         from gluon.dal import RecordUpdater
         
-        meta = self.load_document(childname)
+        #meta = self.load_document(childname, data_id)
         childs = self((self[childname].document==meta.id)&
                          (self[childname].doc_parent==doc_parent)&
                          (self[childname].doc_parent_id==doc_parent_id)).select(self[childname].ALL)
@@ -266,24 +269,37 @@ class LDS(DataBase):
         
         
 class DocumentMeta(Row):
-    def __init__(self, db, *args, **kwargs):
-        from helpers.properties import PropertyManager, PMDocumentField
+    def __init__(self, db, data_id, *args, **kwargs):
+        from helpers.properties import PropertyManager
+        from helpers.document import DOCUMENT_META_DEFAULTS
+        #from helpers.document import DOCUMENT_META_DEFAULTS, DOC_FIELD_META_DEFAULTS
         self._db = db
+        self.__DATA_ID = data_id or None
+        self.__doc_fields = None
         Row.__init__(self, *args, **kwargs)
         
-        self.DOC_FIELDS = self._db((self._db.DocumentField.document == 2)&
-                                   (self._db.DocumentField.doc_parent==self.id)&
-                                   (self._db.DocumentField.doc_parent_id==self.id)).select(self._db.DocumentField.ALL, orderby=self._db.DocumentField.idx) #& (self._db.DocumentField.df_type.belongs(fields.keys()))
+        #self.DOC_FIELDS = self._db((self._db.DocumentField.document == 2)&
+        #                           (self._db.DocumentField.doc_parent==self.id)&
+        #                           (self._db.DocumentField.doc_parent_id==self.id)).select(self._db.DocumentField.ALL, orderby=self._db.DocumentField.idx) #& (self._db.DocumentField.df_type.belongs(fields.keys()))
         
-        map(lambda x: (setattr(x, 'PARENT', self), PropertyManager(x, x.df_meta)), self.DOC_FIELDS)
+        #map(lambda x: (setattr(x, 'PARENT', self), PropertyManager(x, x.df_meta, DOC_FIELD_META_DEFAULTS)), self.DOC_FIELDS)
         
-        PropertyManager(self, self.doc_meta)
+        PropertyManager(self, self.doc_meta, DOCUMENT_META_DEFAULTS)
 
     @property
-    def _DOC_FIELDS(self):
-        if not hasattr(self, '__doc_fields'):
-            self.__doc_fields = self._db.get_document_childs('documentfield', self.id, self.id)
-        return self.__doc_fields        
+    def DOC_FIELDS(self):
+        if not self.__doc_fields:
+            from helpers.properties import PropertyManager
+            from helpers.document import DOC_FIELD_META_DEFAULTS
+            print 2, self.id, self.id
+            self.__doc_fields = self._db((self._db.DocumentField.document == 2)&
+                                   (self._db.DocumentField.doc_parent==self.id)&
+                                   (self._db.DocumentField.doc_parent_id==self.id)).select(self._db.DocumentField.ALL, orderby=self._db.DocumentField.idx, cache=(cache.ram, 360)) #& (self._db.DocumentField.df_type.belongs(fields.keys()))
+            map(lambda x: (setattr(x, 'PARENT', self), PropertyManager(x, x.df_meta, DOC_FIELD_META_DEFAULTS)), self.__doc_fields)
+        return self.__doc_fields
+        #if not hasattr(self, '__doc_fields'):
+        #    self.__doc_fields = self._db.get_document_childs('documentfield', self.id, self.id)
+        #return self.__doc_fields        
 
     def exist_doc_field(self, df_name):
         return len(filter(lambda x: x.df_name==df_name, self.DOC_FIELDS))>0        

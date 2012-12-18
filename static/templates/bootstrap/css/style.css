@@ -202,17 +202,17 @@ input.string, input.integer, input.double, input.decimal, textarea.smalltext {
 	width: 290px;
 }
 
-input.time, input.datetime, input.date, input.upload-text {
+input.time, input.datetime, input.date, input.currency, input.email, input.url {
 	text-align: right;
-	width: 85%;
+	margin-left: 0px;
+	width: 270px;
 }
 
-input.currency {
-	width: 90%;
-}
-
-select.select, select.multipleselect {
-	width: 103%;
+.control-group select {
+	width: 300px;
+	margin-left: 5px;
+	margin-bottom: 9px;
+	padding: 4px;
 }
 
 select.multipleselect {
@@ -225,6 +225,11 @@ input.link-text {
 
 input.upload {
 	display: none;
+}
+
+input.upload-text {
+	margin-left: 5px;
+	width: 118px;	
 }
 
 textarea.smalltext {
@@ -257,6 +262,12 @@ ul.nav.nav-tabs.nav-stacked li a i {
 /* Comments */
 form.document-comments input {
 	width: 130px;
+}
+
+/* Files */
+
+.files-component form {
+	margin-bottom: 0px;
 }
 
 /* Tags */
@@ -366,8 +377,7 @@ tfoot {
 
 .link-condition.first a.remove {
 	display: none;
-}
-		
+}		
 
 /* Datatables */
 

@@ -52,13 +52,14 @@ class State(BaseModel):
     WEEK = DAY * 7
     MONTH = DAY * 30
     
-    DURATIONS = ((SECOND, T('Second(s)')),
-                 (MINUTE, T('Minute(s)')),
-                 (HOUR, T('Hour(s)')),
-                 (DAY, T('Day(s)')),
-                 (WEEK, T('Week(s)')),
-                 (MONTH, T('Month(s)'))
-                )
+    DURATIONS = (
+        (SECOND, T('Second(s)')),
+        (MINUTE, T('Minute(s)')),
+        (HOUR, T('Hour(s)')),
+        (DAY, T('Day(s)')),
+        (WEEK, T('Week(s)')),
+        (MONTH, T('Month(s)'))
+    )
     START, END = range(2)
     TYPE_CHOICES_LIST = ((START, T('Start')),
                           (END, T('End')))
@@ -98,7 +99,8 @@ class Transition(BaseModel):
         self.fields = [
             Field('workflow', 'reference tabWorkflow'),
             Field('name', 'string', length=128),
-            Field('from_state', 'string'),
+            Field('from_state', 'reference tabWorkflowState'),
+            Field('to_state', 'reference tabWorkflowState'),
             Field('roles', 'list:reference tabWorkflowRoles')
         ]
         
@@ -117,17 +119,20 @@ class Event(BaseModel):
             Field('name', 'string', notnull=True, required=True),
             Field('description', 'text'),
             Field('workflow', 'reference tabWorkflow', required=True, notnull=True),
-            Field('state', 'reference tabWorkflowEvent', required=True, notnull=True),
+            Field('state', 'reference tabWorkflowState', required=True, notnull=True),
             Field('roles', 'list:reference tabWorkflowRole'),
             Field('event_types', 'list:reference tabWorkflowEventType'),
             Field('is_mandatory', 'boolean', default=False),
         ]
 
-class WorkflowActivity(BaseModel):
-    tablename = 'tabWorkflowActivity'
+class DocumentWorkflowActivity(BaseModel):
+    tablename = 'tabDocumentWorkflowActivity'
     def set_properties(self):
         self.fields = [
+            Field('document', 'reference tabDocument'),
+            Field('doc_parent', 'reference tabDocument'),
             Field('workflow', 'reference tabWorkflow'),
+            Field('started_on', 'datetime'),
             Field('completed_on', 'datetime')
         ]
         
@@ -162,5 +167,32 @@ class WorkflowHistory(BaseModel):
             Field('transition', 'reference tabWorkflowTransition', required=True, notnull=True),
             Field('event', 'reference tabWorkflowTransition', required=True, notnull=True),
             Field('participant', 'reference tabWorkflowParticipant', required=True, notnull=True),
-            
         ]
+        
+class Notification(BaseModel):
+    tablename = 'tabWorkflowNotification'
+    TRANSITION = 1
+    EVENT = 2
+    ROLE = 3
+    COMMENT = 4
+    
+    TYPE_ROLE_LIST = (
+        (TRANSITION, T('Transition')),
+        (EVENT, T('Event')),
+        (ROLE, T('Role')),
+        (COMMENT, T('Comment'))
+    )
+    
+    def set_properties(self):
+        self.fields = [
+            Field('workflowactivity', 'reference tabWorkflowActivity'),
+            Field('log_type', 'integer', notnull=True, required=True, requires=IS_IN_SET(self.TYPE_ROLE_LIST)),
+            Field('states', 'list:reference tabWorkflowState'),
+            Field('transitions', 'list:reference tabWorkflowTransition'),
+            Field('events', 'list:reference tabWorkflowTransition'),
+            Field('roles', 'list:reference tabWorkflowRoles'),
+            Field('participants', 'list:reference tabWorkflowParticipant'),
+            Field('message', 'text')
+        ]
+    
+    

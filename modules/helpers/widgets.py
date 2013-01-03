@@ -162,7 +162,7 @@ class Date(String):
         default = {'value': value}
         
         attrs = cls._attributes(df, default, **attributes)
-        attrs['_data-strftime'] = df.property('type', 'format') or get_default(types[cls._class].options, 'format') 
+        attrs['_data-fmt_format'] = df.property('type', 'format') or get_default(types[cls._class].options, 'format') 
         
         widget = INPUT(**attrs)
         _class = 'input-prepend %s-control'%df.df_type
@@ -194,6 +194,43 @@ class Time(Date):
 class Datetime(Time):
     _class = types.datetime._class
     prepend = SPAN(I(_class='icon-calendar'), _class='add-on')
+    append = SPAN(I(_class='icon-time'), _class='add-on')
+    
+    @classmethod
+    def controle(cls, df, value, **attributes):
+        
+        datepart, timepart = str(value).split(' ') if value else (None, None)
+        
+        default = {'value': value, '_style':"display:none;"}
+        attrs = cls._attributes(df, default, **attributes)
+        widget = INPUT(**attrs)
+        _class = 'input-prepend %s-control'%df.df_type
+        
+        attrs = {
+                 'name': 'datepart_for_%s'%df.df_name,
+                 'value': datepart,
+                 '_class': types.date._class,
+                 '_data-fmt_format': df.property('type', 'date_format') or get_default(types[cls._class].options, 'date_format')
+                }
+        
+        datepart_widget = INPUT(**attrs)
+        
+        attrs = {
+                 'name': 'timepart_for_%s'%df.df_name,
+                 'value': timepart,
+                 '_class': type.time._class,
+                 '_data-fmt_format': df.property('type', 'time_format') or get_default(types[cls._class].options, 'time_format')
+                }
+        timepart_widget = INPUT(**attrs)
+        return DIV(
+            widget,
+            cls.prepend,
+            datepart_widget,
+            cls.append,
+            timepart_widget,
+            _class
+            
+        )
     
 class Currency(String):
     _class = types.currency._class
@@ -276,10 +313,11 @@ class Select(FormWidget):
     @classmethod
     def requires(cls, df):
         req = []
+        multiple = df.property('type', 'multiple') or get_default(types.select.options, 'multiple')
         if not cls.isrequired(df):
-            req.append(validators.IS_EMPTY_OR(validators.IS_IN_SET(cls.get_options(df))))
+            req.append(validators.IS_EMPTY_OR(validators.IS_IN_SET(cls.get_options(df), multiple=multiple)))
         else:
-            req.append(validators.IS_IN_SET(cls.get_options(df)))
+            req.append(validators.IS_IN_SET(cls.get_options(df, multiple=multiple)))
         return req
     
     @classmethod
@@ -334,7 +372,14 @@ class List(FormWidget):
     
 class Password(String):
     _class = types.password._class
-    
+    @classmethod
+    def requires(cls, df):
+        req = String.requires(df)
+        if df.property('type', 'enforce_safety') or get_default(types.password.options, 'enforce_safety'):
+            req.append(validators.IS_STRONG())
+        req.append(validators.CRYPT())
+        return req
+        
     @classmethod
     def widget(cls, df, value, **attrs):
         return String.widget(df.field, value, **attrs)
@@ -349,7 +394,7 @@ class Filelink(FormWidget):
     @classmethod
     def represent(cls, df, value, download_url=None):
         return FormWidget.represent(df.field, value, download_url)
-
+    
 class Link(object):
     _class = types.link._class
     _row_id_sufix = '_row'
@@ -464,7 +509,7 @@ class Link(object):
                 else:
                     results = [DIV(A(row[self.label], _class='result', _href='javascript:void(0)', **{'_data-id': row['id'], '_data-label': row[self.label]}), _class='result-line') for row in rows]
                 raise HTTP(200, TAG[''](*results).xml())
-                
+            
             else:
                 raise HTTP(200, DIV(T('No results found', _class='no-results')).xml())
 
@@ -860,7 +905,7 @@ class DocumentPage(Document):
                 _class="pull-right"
             ),
             H1(self.document.doc_title),
-            TAG['small'](self.document.doc_description),
+            P(TAG['small'](self.document.doc_description or '')),
             _class="page-header"
         )
 
@@ -1021,7 +1066,7 @@ class ChildTable(ChildModal):
                 columns = [
                            {'rel': '%s.%s'%(self.document.META.doc_tablename, df.df_name), 
                             'label': df.df_label, 'class': df.df_type,
-                            'style': '' if df.property("policy", "is_readable")!="NEVER" else 'hide' } for df in self.document.META.DOC_FIELDS if df.df_type in types.keys()]
+                            'style': '' if df.property("policy", "is_readable")!="NEVER" else 'hide' } for df in self.document.META.DOC_FIELDS if df.df_type in types.keys() and df.property('policy', 'is_readable')!="NEVER"]
             else:
                 for col in cols:
                     df = self.document.META.get_doc_field(col)
@@ -1030,7 +1075,25 @@ class ChildTable(ChildModal):
         return self._cols
     
     def build_table_header(self):
-        return THEAD(TR(*[TH(A(I(_class='icon-plus icon-white'),' ', self.T('Add'), _href='javascript:void(0)', _class='btn btn-mini btn-info', **{'_data-url': URL(**self.base_url_child_add)}))]+[TH(c['label'], _rel=c['rel'], _class=c['style']) for c in self.columns]))
+        return THEAD(
+            TR(*[
+                 TH(
+                    A(
+                      I(_class='icon-plus'),
+                      ' ', 
+                      self.T('Add'), 
+                      _href='javascript:void(0)', 
+                      _class='btn', 
+                      **{
+                         '_data-url': URL(**self.base_url_child_add),
+                         '_data-target': 'new' }
+                    )
+                )]\
+               +[TH(
+                    c['label'], 
+                    _rel=c['rel'], 
+                    _class=c['style']
+                    ) for c in self.columns]))
 
     def get_representation(self, doc_field, data):
         import locale
@@ -1126,7 +1189,8 @@ class ChildTable(ChildModal):
                 TABLE(*components, _id=self._id, _class='table table-hover table-condensed'),
                 self.build_script_table(), 
                 self.build_modal(),
-                _class='table-content clearfix'
+                _class='table-content clearfix',
+                _id="%s_grid"%self._id,
             )
         )
     
@@ -1134,56 +1198,41 @@ class ChildTable(ChildModal):
         from helpers import ajax_set_files
         
         files = []
-        files.append(URL(c='static', f='templates', args=['bootstrap', 'third-party', 'DataTables', 'js', 'jquery.dataTables.min.js']))
-        files.append(URL(c='static', f='templates', args=['bootstrap', 'third-party', 'DataTables', 'extras', 'FixedColumns.min.js']))
+        files.append(URL(c='static', f='js', args=['next2web', 'thirdparty', 'Grid', 'Grid.css']))
+        files.append(URL(c='static', f='js', args=['next2web', 'thirdparty', 'Grid', 'Grid.js']))
         ajax_set_files(files)
         
         script = """
             ;(function($){
-                $('table#%(id)s thead tr th a.btn').on('click', function(){
+               $('table#%(id)s thead tr th a.btn').on('click', function(){
                     $.get($(this).data('url'), function(data){
                         $('div#%(id)s .modal-body').html(data);
                             $('div#%(id)s').modal();
                     });
-                });
-                $('table#%(id)s tbody tr td a').each(function(i){
+               });
+               $('table#%(id)s tbody tr td a').each(function(i){
                     $(this).on('click', function(){
                         $.get($(this).data('url'), function(data){
                             $('div#%(id)s .modal-body').html(data);
                             $('div#%(id)s').modal();
                         });
                     });
-                });
-                function initTable(){
-                    var oTable = $('table#%(id)s').dataTable({
-                        'sScrollY': '500px',
-                        'sScrollX': '100%%25',
-                        'sScrollXInner': '150%%25',
-                        'bScrollCollapse': true,
-                        'bPaginate': false,
-                        'bFilter': false,
-                        'oLanguage': {
-                            'sInfo': '',
-                            'sInfoFiltered': ''
-                        },
-                        'aoColumnDefs': [
-                            {'bSortable': false, 'sClass': 'index', 'aTargets': [0]}
-                        ],
-                        'aaSorting': [[0, 'asc']]
-                    });
-                }
-                
-                if ($('table#%(id)s').dataTable === undefined) {
-                    setTimeout(initTable, 1500);
-                } else {
-                    initTable();
-                }
-                                
+               });
+               function initGrid(){
+                   var table = new Grid("%(id)s_grid", {
+                       srcType:'dom',
+                       srcData:'%(id)s',
+                       fixedCols: 1
+                   });
+               }
+               
+               setTimeout(initGrid, 1500);
+               
             })(jQuery);
         """%{'id': self._id}
         if self.request.ajax:
             self.response.js = (self.response.js or '') + script
-            return TAG['']()
+            return TAG[''](script)
         return SCRIPT(script)
 
     @classmethod

@@ -185,7 +185,6 @@ class Currency(MetaField):
         elif props.has_key['maximun']:
             req.append(validators.IS_FLOAT_IN_RANGE(maximun=props['maximun'], dot=props['decimalSeparator']))
     
-    
 class Text(MetaField):
     _type = types.text
 
@@ -200,6 +199,10 @@ class Rule(MetaField):
     
 class Select(MetaField):
     _type = types.select
+    
+    @classmethod
+    def build_type(cls, df):
+        return df.property("type", "datatype")
     
 class MultipleSelect(MetaField):
     _type = types.multipleselect

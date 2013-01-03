@@ -257,7 +257,8 @@ types = Storage({
         '_class': 'datetime',
         'label': T('Date/Time'),
         'options': [
-            Field('format', 'string', default='%Y-%m-%d %H-%M-%S', requires=validators.IS_NOT_EMPTY(), label='Format'),
+            Field('data_format', 'string', default='%Y-%m-%d', requires=validators.IS_NOT_EMPTY(), label=T('Date Format')),
+            Field('time_format', 'string', default='%H-%M-%S', required=validators.IS_NOT_EMPTY(), label=T('Time Format')),
             Field('minimun', 'string', default='1900-01-01', label=T('Minimun')),
             Field('maximun', 'string', default=None, label=T('Maximun'))
         ],
@@ -293,11 +294,13 @@ types = Storage({
         ],
     }),
     'select': Storage({
-        'native': 'string',
+        'native': '',
         'class': 'select',
         'label': T('Single Choice'),
         'options': [
+            Field('datatype', 'string', notnull=True, required=True, requires=validators.IS_IN_SET({'string': T("String")}), label=T('Datatype')),
             Field('choices', 'text', notnull=True, required=True, label=T('Choices')),
+            Field('multiple', 'boolean', default=False, label=T('Multiple?'))
         ],
     }),
     'multipleselect': Storage({
@@ -319,11 +322,6 @@ types = Storage({
 })
 
 vtypes = Storage({
-    'suggest': Storage({
-        'native': 'virtual',
-        '_class': 'suggest',
-        'label': T('Suggest'),
-    }),
     'table': Storage({
         'native': 'virtual',
         '_class': 'table',
@@ -363,6 +361,11 @@ vtypes = Storage({
        'native': 'virtual',
        '_class': 'button',
        'label': T('Button'),
+    }),
+    'route': Storage({
+       'native': 'string',
+       '_class': 'href',
+       'label': T('Route')
     }),
 })
 

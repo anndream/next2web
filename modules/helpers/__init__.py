@@ -5,58 +5,80 @@ from gluon import current
 from gluon.html import URL
 import datetime, time
 
+import exception
+
 class ValidationError(Exception):
     pass
 
 T = current.T
+cache = current.cache
 locale.setlocale(locale.LC_ALL, '')
+
+COMMAND_FUNCTIONS = {}
+
+class CommandWrapper(object):
+    def __init__(self, func):
+        import functools
+        
+        fn = '%s.%s'%(func.im_class.__name__, func.im_func.__name__)
+        
+        self._repr = cache.disk(fn, lambda: ID(), time_expire=60*60)
+        self._func = func
+        
+        COMMAND_FUNCTIONS[self._repr] = self
+        
+        functools.update_wrapper(self, func)
+    def __call__(self, *args, **kwargs):
+        return self._func(*args, **kwargs)
+    def __repr__(self):
+        return self._repr
+    def __str__(self):
+        return self._repr
+
+def command(func):
+    return CommandWrapper(func)
+
+def commandrunner(key, *args, **kwargs):
+    return COMMAND_FUNCTIONS[key](*args, **kwargs)
 
 if not current.response.message_log:
     current.response.message_log = []
 
-def sucessor(text):
-    import string.lowercase as alphabet
-    
-    result = text
-    
-    rtext = [t for t in text]
-    rtext.reverse()
-    
-    for i, last in enumerate(rtext):
-        next = ''
-        carry = False
-        
-        if last.isalpha():
+def sucessor(value):
+    import string
+    alphabet = string.lowercase
+    length = len(alphabet)
+    result = value
+    i = len(value)
+
+    while (i >= 0):
+        i -=1
+        last = value[i]
+        nxt, carry = "", False
+
+        if str(last).isalpha():
             try:
-                index = alphabet.index(last.lower())
-            except ValueError:
-                index = None
-            
-            if index is None:
-                next, carry = last, True
-            else:
-                isupper = last == last.upper()
-                next = alphabet[index+1] % len(text)
-                if isupper: 
-                    next = next.upper()
-                carry = index + 1 > len(text)
+                index = alphabet.index(str(last))
+                nxt = alphabet[(index + 1) % length]
+                if (last == last.upper()):
+                    nxt = nxt.upper()
+                carry = index + 1 >= length
                 if carry and i == 0:
-                    added = 'A' if isupper else 'a'
-                    result = added + next + result[1:]
+                    added = 'A' if last == last.upper() else 'a'
+                    result = added + nxt + result[1:]
                     break
+            except ValueError:
+                nxt, carry = last, True
         else:
-            next = int(last) + 1;
-            if next > 9 :
-                next = 0
-                carry = True
+            nxt = int(last) + 1
+            if nxt > 9:
+                nxt, carry = 0, True
             if carry and i == 0:
-                result = '1' + str(next) + result[1:]
-                break
-        
-        result = result[0:i] + str(next) + result[i+1:]
+                result = '1' + nxt + result[:1]
+                break;
+        result = result[:i] + str(nxt) + result[i+1:]
         if not carry:
             break
-        
     return result
 
 def md5sum(filename):

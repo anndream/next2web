@@ -14,6 +14,8 @@ from helpers import message
 
 class ChildManager(BaseManager):
     def __init__(self, db, document, doc_parent, storager, part_name=None ):
+        if not part_name:
+            part_name = self.__class__.__name__
         BaseManager.__init__(self, db, document, storager, part_name)
         
         self.doc_parent = doc_parent
@@ -22,9 +24,6 @@ class ChildManager(BaseManager):
         self.T = current.T
         self.request = current.request
         self.response = current.response
-        
-        if not self._part_name:
-            self._part_name = self.__class__.__name__
         
         self._id = '%s_%s_%s'%(self._part_name, self.child_name, self.doc_parent.META.doc_name)
         self._name = '%s_for_%s_on_%s'%(self._part_name, self.child_name, self.doc_parent.META.doc_name)
@@ -86,7 +85,9 @@ class ChildManager(BaseManager):
     def list_childs_in_db(self):
         childs = self.db((self.db[self.child_name].document==self.document.META.id)&
                          (self.db[self.child_name].doc_parent==self.doc_parent.id)&
-                         (self.db[self.child_name].doc_parent_id==self.doc_parent.id)).select(self.db[self.child_name].ALL, cache=(current.cache.ram, 360))
+                         (self.db[self.child_name].doc_parent_id==self.doc_parent.id)).select(self.db[self.child_name].ALL, 
+                                                                                              cache=(current.cache.ram, 360),
+                                                                                              orderby=self.db[self.child_name].idx)
         
         map(lambda x: x.__setitem__('__saved', (True, x.id)), childs)
         

@@ -1,0 +1,263 @@
+[
+{
+    "doc_name": "workflowRoles",
+    "doc_title": "Roles",
+    "doc_tablename": "tabWorkflowRoles",
+    "doc_fields": [
+        {
+            "idx": 1,
+            "df_name": "wkflrl_section_1",
+            "df_type": "sectionbreak"
+        },
+        {
+            "idx": 2,
+            "df_name": "wkflrl_column_1_1",
+            "df_type": "columnbreak"
+        },
+        {
+            "idx": 3,
+            "df_name": "name",
+            "df_type": "string",
+            "df_label": "Role Name",
+            "df_meta": [
+                {"group": "policy", "property": "is_required", "value": "ALWAYS"},
+                {"group": "policy", "porperty": "is_waritable", "value": "ON_CREATE"}
+            ]
+        },
+        {
+            "idx": 4,
+            "df_name": "description",
+            "df_type": "smalltext",
+            "df_label": "Description"
+        }
+    ]
+},
+{
+    "doc_name": "workflow",
+    "doc_title": "Document",
+    "doc_tablename": "tabDocument",
+    "doc_fields": [
+        {
+            "idx": 1,
+            "df_name": "name",
+            "df_type": "string",
+            "df_label": "Workflow Name",
+            "df_meta": [
+                {"group": "policy", "property": "is_required", "value": "ALWAYS"},
+                {"group": "policy", "property": "is_writable", "value": "ON_CREATE"}
+            ]
+        },
+        {
+            "idx": 2,
+            "df_name": "description",
+            "df_type": "smalltext",
+            "df_label": "Description"
+        }
+    ]
+},
+{
+    "doc_name": "workflowState",
+    "doc_title": "Workflow State",
+    "doc_tablename": "tabWorkflowState",
+    "doc_fields": [
+        {
+            "idx": 1,
+            "df_name": "workflow",
+            "df_type": "link",
+            "df_label": "Worflow",
+            "df_meta": [
+                {"group": "type", "property": "document", "value": "workflow"},
+                {"group": "type", "property": "label", "value": "name"}
+            ]
+        },
+        {
+            "idx": 2,
+            "df_name": "name",
+            "df_type": "string",
+            "df_label": "State Name",
+            "df_meta": [
+                {"group": "policy", "property": "is_required", "value": "ALWAYS" },
+                {"group": "policy", "property": "is_writable", "value": "ON_CREATE"}
+            ]
+        },
+        {
+            "idx": 3,
+            "df_name": "description",
+            "df_type": "smalltext",
+            "df_label": "Description"
+        },
+        {
+            "idx": 4,
+            "df_name": "type",
+            "df_type": "select",
+            "df_label": "Type",
+            "df_meta": [
+                {"group": "type", "property": "datatype", "value": "integer"}
+            ]
+        },
+        {
+            "idx": 5, 
+            "df_name": "roles",
+            "df_type": "link",
+            "df_label": "Roles",
+            "df_meta": [
+                {"group": "type", "property": ""
+            ]
+        }
+    ]
+},
+{
+    "doc_name": "workflowTransition",
+    "doc_title": "Workflow Transition",
+    "doc_tablename": "tabWorkflowTransition",
+    "doc_fields": [
+        {
+            "idx": 1,
+            "df_name": "workflow",
+            "df_type": "link",
+            "df_label": "Workflow",
+            "df_meta": [
+                {"group": "type", "property": "document", "value": "workflow"},
+                {"group": "type", "property": "label", "value": "name"}
+            ]
+        },
+        {
+            "idx": 2,
+            "df_name": "name",
+            "df_type": "string",
+            "df_label": "Name",
+            "df_meta": [
+                {"group": "policy", "property": "is_required", "value": "ALWAYS"},
+                {"group": "policy", "property": "is_writable", "value": "ON_CREATE"}
+            ]
+        },
+        {
+            "idx": 3,
+            "df_name": "from_state",
+            "df_type": "link",
+            "df_label": "Origin",
+            "df_meta": [
+                {"group": "policy", "property": "is_required", "value": "ALWAYS"},
+                {"group": "type", "property": "document", "value": "workflowState"},
+                {"group": "type", "property": "label", "value": "name"}
+            ]
+        },
+        {
+            "idx": 4,
+            "df_name": "to_state",
+            "df_type": "link",
+            "df_label": "Destination",
+            "df_meta": [
+                {"group": "policy", "property": "is_required", "value": "ALWAYS"},
+                {"group": "type", "property": "document", "value": "workflowState"},
+                {"group": "type", "property": "label", "value": "name"}
+            ]
+        },
+        {
+            "idx": 5,
+            "df_name": "roles",
+            "df_type": "list:link",
+            "df_label": "Roles",
+            "df_meta": [
+                {"group": "policy", "property": "is_required", "value": "ALWAYS"},
+                {"group": "type", "property": "document", "value": "workflowRole"},
+                {"group": "type", "property": "label", "value": "name"}
+            ]
+        }
+    ]
+},
+{
+    "doc_name": "workflowEventType",
+    "doc_title": "Workflow Event Type",
+    "doc_tablename": "tabWorkflowEventType",
+    "doc_fields": [
+        {
+            "df_name": "name",
+            "df_type": "string",
+            "df_label": "Name",
+            "df_meta": [
+                {"group": "policy", "property": "is_required", "value": "ALWAYS"}
+            ]
+        },
+        {
+            "df_name": "description",
+            "df_type": "smalltext",
+            "df_label": "Description"
+        }
+    ]
+},
+{
+    "doc_name": "workflowEvent",
+    "doc_title": "Workflow Event",
+    "doc_tablename": "tabWorkflowEvent",
+    "doc_fields": [
+        {
+            "df_name": "name",
+            "df_type": "string",
+            "df_label": "Name",
+            "df_meta": [
+                {"group": "policy", "property": "is_required", "value": "ALWAYS"},
+                {"group": "policy", "property": "is_writable", "value": "ON_CREATE"}
+            ]
+        },
+        {
+            "df_name": "description",
+            "df_type": "smalltext",
+            "df_label": "Description"
+        },
+        {
+            "df_name": "workflow",
+            "df_type": "link",
+            "df_label": "Workflow",
+            "df_meta": [
+                {"group": "policy", "property": "is_required", "value": "ALWAYS"},
+                {"group": "type", "property": "document", "value": "workflow"},
+                {"group": "type", "property": "label", "value": "name"}
+            ]
+        },
+        {
+            "df_name": "type",
+            "df_type": "link",
+            "df_label": "Event Type",
+            "df_meta": [
+                {"group": "policy", "property": "is_required", "value": "ALWAYS"}.
+                {"group": "type", "property": "document", "value": "workflowEventType"},
+                {"group": "type", "property": "label", "value": "name"}
+            ] 
+        },
+        {
+            "df_name": "state",
+            "df_type": "link",
+            "df_label": "State",
+            "df_meta": [
+                {"group": "policy", "property": "is_required", "value": "ALWAYS"},
+                {"group": "type", "property": "document", "value": "workflowState"},
+                {"group": "type", "property": "label", "value": "name"}
+            ]
+        },
+        {
+            "df_name": "roles",
+            "df_type": "list:link",
+            "df_type": "Roles",
+            "df_meta": [
+                {"group": "policy", "property": "is_required", "value": "ALWAYS"},
+                {"group": "type", "property": "document", "value": "workflowRole"},
+                {"group": "type", "property": "label", "value": "name"}
+            ]
+        }, 
+        {
+            "df_name": "mandatory",
+            "df_type": "yesno",
+            "df_label": "Is Mandatory?",
+            "df_meta": [
+                {"group": "type", "property": "default", "value": false}
+            ]
+        }
+    ]
+},
+{
+    "doc_name": "workflowActivity",
+    "doc_title": "Workflow Activity",
+    "doc_tablename": "tabDocumentWorkflowActivity",
+}
+]

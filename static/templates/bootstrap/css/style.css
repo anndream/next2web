@@ -239,6 +239,21 @@ textarea.smalltext {
 	margin-left: 5px;
 }
 
+textarea ::-webkit-scrollbar {
+		width: 6px; 
+		height: 6px
+}
+textarea ::-webkit-scrollbar-thumb {
+	border:1px solid #B8B8B8;
+	-webkit-border-radius: 0px;
+	border-radius: 3px;
+	background: #eee;
+}
+textarea ::-webkit-scrollbar-track,::-webkit-scrollbar-corner {
+	background: #eee;
+}
+
+
 ul.nav.nav-tabs.nav-stacked li a i {
 	margin-right: 5px;
 }

@@ -384,8 +384,8 @@ class Mailer(Mail):
         self.settings.server = config.mail.server
         self.settings.sender = config.mail.sender
         self.settings.login = config.mail.login
-
-
+        
+        
 class FormCreator(Crud):
     def __init__(self, db):
         Crud.__init__(db)
